@@ -17,7 +17,11 @@
 
 import type { ModelWithProvider } from '../../../services/StaticModelsService';
 import { getContextWindowOverrideKey } from '../../../ui/chat/utils/ContextWindowSettings';
-import { stripCompatibleModelPrefix } from '../../../services/llm/adapters/shared/CompatibleEndpointUtils';
+import {
+  isCustomCompatibleProviderId,
+  resolveCompatibleModelThinking,
+  stripCompatibleModelPrefix
+} from '../../../services/llm/adapters/shared/CompatibleEndpointUtils';
 
 export interface ModelCapabilities {
   /** False when nothing is known; the Thinking row is shown only for models known to reason. */
@@ -64,11 +68,23 @@ export function getStaticModelCapabilities(
   provider: string | null | undefined,
   model: string | null | undefined
 ): ModelCapabilities | undefined {
-  if (provider && model && (provider.startsWith('anthropic-compatible-') || provider.startsWith('antigravity-compatible-'))) {
+  if (provider && model && isCustomCompatibleProviderId(provider)) {
+    const detected = resolveCompatibleModelThinking(provider, model);
     const bareModel = stripCompatibleModelPrefix(model);
-    const matched = staticModels.findModel('anthropic', bareModel) ?? staticModels.findModel('google', bareModel);
+    const matched = (['openai', 'openai-codex', 'anthropic', 'google'] as const)
+      .map(candidate => staticModels.findModel(candidate, bareModel))
+      .find(Boolean);
+    if (detected && (detected.source === 'probed' || detected.source === 'server')) {
+      return {
+        supportsThinking: detected.supportsThinking === true,
+        supportsSamplingParams: matched ? matched.supportsSamplingParams !== false : true
+      };
+    }
+    if (provider.startsWith('openai-compatible-')) {
+      return undefined;
+    }
     return {
-      supportsThinking: matched ? matched.capabilities?.supportsThinking === true : true,
+      supportsThinking: matched ? matched.capabilities?.supportsThinking === true : false,
       supportsSamplingParams: matched ? matched.supportsSamplingParams !== false : true
     };
   }

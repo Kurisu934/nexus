@@ -15,7 +15,12 @@ import {
 } from '../openai-compatible/OpenAICompatibleConfig';
 import type { OpenAICompatibleContextCheckResult } from '../openai-compatible/OpenAICompatibleContextCheck';
 import { ProviderHttpClient } from '../shared/ProviderHttpClient';
-import { stripCompatibleModelPrefix } from '../shared/CompatibleEndpointUtils';
+import { resolveDefinitionThinking, stripCompatibleModelPrefix } from '../shared/CompatibleEndpointUtils';
+import {
+  probeAnthropicMessagesThinking,
+  readReportedThinkingMetadata,
+  type CompatibleThinkingProbeResult,
+} from '../shared/CompatibleThinkingProbe';
 import {
   runCalibratedContextWindowCheck,
   sendAnthropicMessagesContextProbe,
@@ -71,7 +76,7 @@ export function buildAnthropicCompatibleModels(config: LLMProviderConfig): Model
         maxOutputTokens: defaults.maxTokens ?? ANTHROPIC_COMPATIBLE_MAX_OUTPUT_TOKENS,
         supportsStreaming: true,
         supportsFunctions: true,
-        supportsThinking: true,
+        supportsThinking: resolveDefinitionThinking(definitions[id]).supportsThinking ?? true,
         supportsImages: true,
         supportsJSON: true,
         pricing: null,
@@ -188,7 +193,12 @@ export function parseDiscoveredModelEntries(payload: unknown): DiscoveredOpenAIC
         : undefined;
     if (!isOpenAICompatibleModelId(rawId) || models.has(rawId)) continue;
     const contextWindow = readAnthropicReportedContextWindow(item);
-    models.set(rawId, contextWindow === undefined ? { id: rawId } : { id: rawId, contextWindow });
+    const thinking = readReportedThinkingMetadata(item);
+    const discovered: DiscoveredOpenAICompatibleModel = { id: rawId };
+    if (contextWindow !== undefined) discovered.contextWindow = contextWindow;
+    if (thinking.supportsThinking !== undefined) discovered.supportsThinking = thinking.supportsThinking;
+    if (thinking.thinkingEfforts !== undefined) discovered.thinkingEfforts = thinking.thinkingEfforts;
+    models.set(rawId, discovered);
   }
   return [...models.values()];
 }
@@ -252,4 +262,22 @@ export async function checkAnthropicCompatibleContextWindow(request: {
       signal: request.signal,
     })
   );
+}
+
+export async function probeAnthropicCompatibleModelThinking(request: {
+  baseUrl: string;
+  apiKey: string;
+  authMode?: AnthropicCompatibleAuthMode;
+  model: string;
+  signal?: AbortSignal;
+}): Promise<CompatibleThinkingProbeResult> {
+  const { messagesUrl } = resolveAnthropicCompatibleUrls(request.baseUrl);
+  const headers = anthropicCompatibleHeaders(request.apiKey, request.authMode ?? 'x-api-key');
+  return probeAnthropicMessagesThinking({
+    messagesUrl,
+    headers,
+    provider: 'anthropic-compatible',
+    model: request.model,
+    signal: request.signal,
+  });
 }

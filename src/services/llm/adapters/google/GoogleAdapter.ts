@@ -24,7 +24,11 @@ import type { AntigravityCompatibleAuthMode, ThinkingEffort } from '../../../../
 import { ProviderHttpError } from '../shared/ProviderHttpClient';
 import { staticModelToModelInfo, getStaticModelPricing } from '../shared/StaticModelHelpers';
 import { extractStreamErrorMessage } from '../../streaming/streamErrorFrames';
-import { stripCompatibleModelPrefix } from '../shared/CompatibleEndpointUtils';
+import {
+  clampEffortToSupportedTiers,
+  stripCompatibleModelPrefix,
+  type ResolvedCompatibleModelThinking
+} from '../shared/CompatibleEndpointUtils';
 type JsonObject = Record<string, unknown>;
 
 interface GooglePart extends JsonObject {
@@ -70,7 +74,7 @@ interface GoogleToolWrapper {
 
 interface GoogleThinkingConfig {
   thinkingBudget?: number;
-  thinkingLevel?: 'low' | 'medium' | 'high';
+  thinkingLevel?: ThinkingEffort;
   /**
    * Gemini only emits thought-summary parts (`thought: true`) when this is set.
    * Without it the model still thinks, but the response carries no reasoning to
@@ -186,6 +190,7 @@ export interface GoogleAdapterOptions {
   baseUrl?: string;
   authMode?: AntigravityCompatibleAuthMode;
   customModels?: ModelInfo[];
+  thinkingOverrides?: Record<string, ResolvedCompatibleModelThinking>;
 }
 
 export class GoogleAdapter extends BaseAdapter {
@@ -193,6 +198,7 @@ export class GoogleAdapter extends BaseAdapter {
   readonly baseUrl: string;
   private readonly authMode?: AntigravityCompatibleAuthMode;
   private readonly customModels?: ModelInfo[];
+  private readonly thinkingOverrides?: Record<string, ResolvedCompatibleModelThinking>;
 
   constructor(apiKey: string, model?: string, options?: GoogleAdapterOptions) {
     super(apiKey, model || GOOGLE_DEFAULT_MODEL);
@@ -200,6 +206,7 @@ export class GoogleAdapter extends BaseAdapter {
     this.baseUrl = (options?.baseUrl || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/+$/, '');
     this.authMode = options?.authMode;
     this.customModels = options?.customModels;
+    this.thinkingOverrides = options?.thinkingOverrides;
     this.initializeCache();
   }
 
@@ -247,6 +254,7 @@ export class GoogleAdapter extends BaseAdapter {
       // Gemini 3 and Argon use thinking levels. Keep token budgets for older custom
       // model IDs that users may still pass through the adapter explicitly.
       const effort = options?.thinkingEffort || 'medium';
+      const thinkingDisabled = this.thinkingOverrides?.[model]?.supportsThinking === false;
       const thinkingConfig = this.getThinkingConfig(
         model,
         effort,
@@ -263,7 +271,7 @@ export class GoogleAdapter extends BaseAdapter {
           ...samplingConfig,
           maxOutputTokens: this.getMaxOutputTokens(model, true, options?.maxTokens),
           // Enable thinking mode when tools are present or explicitly requested
-          ...((options?.enableThinking || (options?.tools && options.tools.length > 0)) && {
+          ...(!thinkingDisabled && (options?.enableThinking || (options?.tools && options.tools.length > 0)) && {
             thinkingConfig
           })
         }
@@ -524,9 +532,12 @@ export class GoogleAdapter extends BaseAdapter {
         generationConfig: {
           ...this.getSamplingConfig(model, options?.temperature),
           maxOutputTokens: this.getMaxOutputTokens(model, false, options?.maxTokens),
-          ...(this.isGemini4StandardModel(model) && options?.enableThinking && {
-            thinkingConfig: this.getThinkingConfig(model, options.thinkingEffort || 'medium', true)
-          })
+          ...((this.isGemini4StandardModel(model) || this.thinkingOverrides?.[model]?.supportsThinking === true)
+            && options?.enableThinking
+            && this.thinkingOverrides?.[model]?.supportsThinking !== false
+            && {
+              thinkingConfig: this.getThinkingConfig(model, options.thinkingEffort || 'medium', true)
+            })
         }
       }
     };
@@ -678,15 +689,29 @@ export class GoogleAdapter extends BaseAdapter {
     // withholds the `thought: true` parts the reasoning UI renders unless the
     // request opts in, which is why Gemini alone streamed no reasoning.
     const thoughts = includeThoughts ? { includeThoughts: true } : {};
+    const override = this.thinkingOverrides?.[model];
+    const clampedEffort = clampEffortToSupportedTiers(effort, override?.efforts);
+
+    if (override?.mode === 'budget') {
+      const params = ThinkingEffortMapper.getGoogleParams({ enabled: true, effort: clampedEffort });
+      return { ...thoughts, thinkingBudget: params?.thinkingBudget || 8192 };
+    }
+
+    if (override?.mode === 'level') {
+      return { ...thoughts, thinkingLevel: clampedEffort };
+    }
 
     // thinkingLevel and the legacy thinkingBudget are mutually exclusive: sending
     // both in one request is rejected, so each generation gets exactly one.
     if (this.usesThinkingLevels(model)) {
-      const level = clampThinkingEffortToHigh(effort);
+      if (override?.efforts?.length) {
+        return { ...thoughts, thinkingLevel: clampedEffort };
+      }
+      const level = clampThinkingEffortToHigh(clampedEffort);
       return { ...thoughts, thinkingLevel: model.startsWith('gemini-3-pro-preview') && level === 'medium' ? 'high' : level };
     }
 
-    const params = ThinkingEffortMapper.getGoogleParams({ enabled: true, effort });
+    const params = ThinkingEffortMapper.getGoogleParams({ enabled: true, effort: clampedEffort });
     return { ...thoughts, thinkingBudget: params?.thinkingBudget || 8192 };
   }
 

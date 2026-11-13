@@ -17,6 +17,11 @@ import {
   buildAntigravityCompatibleModels,
   resolveAntigravityCompatibleContextWindow,
 } from '../antigravity-compatible/AntigravityCompatibleConfig';
+import {
+  buildResponsesCompatibleModels,
+  resolveResponsesCompatibleContextWindow,
+  RESPONSES_COMPATIBLE_CONTEXT_WINDOW,
+} from '../responses-compatible/ResponsesCompatibleConfig';
 import { getCustomCompatibleModelsRecord } from './CompatibleEndpointUtils';
 
 export function buildCustomCompatibleModels(config: LLMProviderConfig): ModelInfo[] {
@@ -27,6 +32,8 @@ export function buildCustomCompatibleModels(config: LLMProviderConfig): ModelInf
       return buildAntigravityCompatibleModels(config);
     case 'openai-compatible':
       return buildOpenAICompatibleModels(config);
+    case 'responses-compatible':
+      return buildResponsesCompatibleModels(config);
     default:
       return [];
   }
@@ -43,6 +50,8 @@ export function getDefaultCustomCompatibleContextWindow(
       return resolveAntigravityCompatibleContextWindow(undefined, modelId).contextWindow || ANTIGRAVITY_COMPATIBLE_CONTEXT_WINDOW;
     case 'openai-compatible':
       return OPENAI_COMPATIBLE_CONTEXT_WINDOW;
+    case 'responses-compatible':
+      return resolveResponsesCompatibleContextWindow(undefined, modelId).contextWindow || RESPONSES_COMPATIBLE_CONTEXT_WINDOW;
     default:
       return 128_000;
   }
@@ -59,6 +68,8 @@ function resolveModelContextByDriver(
       return resolveAnthropicCompatibleContextWindow(definition, modelId).contextWindow;
     case 'antigravity-compatible':
       return resolveAntigravityCompatibleContextWindow(definition, modelId).contextWindow;
+    case 'responses-compatible':
+      return resolveResponsesCompatibleContextWindow(definition, modelId).contextWindow;
     default:
       return resolveOpenAICompatibleContextWindow(definition).contextWindow;
   }

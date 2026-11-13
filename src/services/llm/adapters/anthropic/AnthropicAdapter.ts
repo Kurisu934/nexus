@@ -28,7 +28,11 @@ import type {
 } from '../../../../types/llm/ProviderTypes';
 import { TokenUsageExtractor } from '../../utils/TokenUsageExtractor';
 import { acceptsSamplingParams } from '../shared/SamplingParams';
-import { stripCompatibleModelPrefix } from '../shared/CompatibleEndpointUtils';
+import {
+  clampEffortToSupportedTiers,
+  stripCompatibleModelPrefix,
+  type ResolvedCompatibleModelThinking
+} from '../shared/CompatibleEndpointUtils';
 interface AnthropicMessage {
   role: string;
   content: string | AnthropicContentBlock[];
@@ -126,6 +130,7 @@ export interface AnthropicAdapterOptions {
   messagesUrl?: string;
   authMode?: AnthropicCompatibleAuthMode;
   customModels?: ModelInfo[];
+  thinkingOverrides?: Record<string, ResolvedCompatibleModelThinking>;
 }
 
 export class AnthropicAdapter extends BaseAdapter {
@@ -134,6 +139,7 @@ export class AnthropicAdapter extends BaseAdapter {
   private readonly messagesUrl: string;
   private readonly authMode?: AnthropicCompatibleAuthMode;
   private readonly customModels?: ModelInfo[];
+  private readonly thinkingOverrides?: Record<string, ResolvedCompatibleModelThinking>;
 
   constructor(apiKey: string, model?: string, options?: AnthropicAdapterOptions) {
     super(apiKey, model || ANTHROPIC_DEFAULT_MODEL);
@@ -142,6 +148,7 @@ export class AnthropicAdapter extends BaseAdapter {
     this.messagesUrl = options?.messagesUrl || `${this.baseUrl}/v1/messages`;
     this.authMode = options?.authMode;
     this.customModels = options?.customModels;
+    this.thinkingOverrides = options?.thinkingOverrides;
     this.initializeCache();
   }
 
@@ -595,8 +602,12 @@ export class AnthropicAdapter extends BaseAdapter {
   }
 
   private supportsThinking(modelId: string): boolean {
+    const normalized = this.normalizeModelId(modelId);
+    const override = this.thinkingOverrides?.[modelId] ?? this.thinkingOverrides?.[normalized];
+    if (override?.supportsThinking !== undefined) {
+      return override.supportsThinking;
+    }
     if (this.customModels) {
-      const normalized = this.normalizeModelId(modelId);
       const custom = this.customModels.find(m => m.id === modelId || m.id === normalized);
       if (custom?.supportsThinking !== undefined) {
         return custom.supportsThinking;
@@ -685,16 +696,26 @@ export class AnthropicAdapter extends BaseAdapter {
     // Anthropic rejects sampling temperature whenever thinking is enabled.
     delete requestParams.temperature;
 
+    const override = this.thinkingOverrides?.[modelId] ?? this.thinkingOverrides?.[this.normalizeModelId(modelId)];
+    const clampedEffort = clampEffortToSupportedTiers(effort, override?.efforts);
     const bareModelId = stripCompatibleModelPrefix(modelId);
-    if (this.supportsAdaptiveThinking(modelId)) {
+    const useAdaptive = override?.mode === 'adaptive'
+      ? true
+      : override?.mode === 'budget'
+        ? false
+        : this.supportsAdaptiveThinking(modelId);
+
+    if (useAdaptive) {
       requestParams.thinking = { type: 'adaptive', display: 'summarized' };
-      requestParams.output_config = { effort: mapAnthropicAdaptiveEffort(effort, bareModelId) };
+      requestParams.output_config = {
+        effort: override?.efforts?.length ? clampedEffort : mapAnthropicAdaptiveEffort(clampedEffort, bareModelId)
+      };
       return maxTokens;
     }
 
-    const thinkingParams = ThinkingEffortMapper.getAnthropicParams({ enabled: true, effort }, maxTokens);
+    const thinkingParams = ThinkingEffortMapper.getAnthropicParams({ enabled: true, effort: clampedEffort }, maxTokens);
     const budgetTokens = thinkingParams?.budget_tokens ?? 16000;
-    if ((effort === 'xhigh' || effort === 'max') && budgetTokens < 1024) {
+    if ((clampedEffort === 'xhigh' || clampedEffort === 'max') && budgetTokens < 1024) {
       throw new Error('Anthropic manual thinking at Extra high or Max requires maxTokens of at least 2048.');
     }
     requestParams.thinking = { type: 'enabled', budget_tokens: budgetTokens };

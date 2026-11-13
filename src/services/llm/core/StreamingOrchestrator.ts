@@ -27,7 +27,7 @@ import type { BaseAdapter } from '../adapters/BaseAdapter';
 import type { ChatRuntimeEvent } from '../runtime/ChatRuntimeEvent';
 import { mapProviderStreamChunk } from '../runtime/ProviderStreamEventMapper';
 import { streamWithOverloadRetry } from '../adapters/shared/OverloadRetry';
-import { resolveProviderWireFamily } from '../adapters/shared/CompatibleEndpointUtils';
+import { resolveProviderWireFamily, resolveResponsesStateMode } from '../adapters/shared/CompatibleEndpointUtils';
 
 // Re-export types for backward compatibility
 export type { ConversationMessage, GoogleMessage, StreamingOptions, StreamYield };
@@ -54,7 +54,11 @@ export class StreamingOrchestrator {
     chunk: { metadata?: Record<string, unknown> },
     options?: StreamingOptions
   ): void {
-    if (provider !== 'openai' && provider !== 'openai-codex') {
+    if (
+      provider !== 'openai' &&
+      provider !== 'openai-codex' &&
+      !(provider.startsWith('responses-compatible-') && resolveResponsesStateMode(provider) === 'stateful')
+    ) {
       return;
     }
 

@@ -12,7 +12,11 @@ import {
   type StreamChunk,
 } from '../types';
 import { isOpenAICompatibleModelId } from '../openai-compatible/OpenAICompatibleConfig';
-import { resolveAntigravityModelWire } from '../shared/CompatibleEndpointUtils';
+import {
+  resolveAntigravityModelWire,
+  resolveDefinitionThinking,
+  type ResolvedCompatibleModelThinking,
+} from '../shared/CompatibleEndpointUtils';
 import {
   ANTIGRAVITY_COMPATIBLE_CONTEXT_WINDOW,
   buildAntigravityCompatibleModels,
@@ -45,11 +49,19 @@ export class AntigravityCompatibleAdapter extends BaseAdapter {
     this.savedModels = savedModels;
 
     const authMode = config.antigravityCompatible?.authMode ?? 'both';
+    const thinkingOverrides: Record<string, ResolvedCompatibleModelThinking> = {};
+    for (const [id, definition] of Object.entries(config.antigravityCompatible?.models ?? {})) {
+      const resolvedThinking = resolveDefinitionThinking(definition);
+      if (resolvedThinking.source !== 'default') {
+        thinkingOverrides[id] = resolvedThinking;
+      }
+    }
     this.googleDelegate = new GoogleAdapter(config.apiKey, savedModels[0]?.id, {
       instanceName: instanceId,
       baseUrl: resolved.v1betaBaseUrl,
       authMode,
       customModels: savedModels,
+      thinkingOverrides,
     });
     this.anthropicDelegate = new AnthropicAdapter(config.apiKey, savedModels[0]?.id, {
       instanceName: instanceId,
@@ -57,6 +69,7 @@ export class AntigravityCompatibleAdapter extends BaseAdapter {
       messagesUrl: resolved.messagesUrl,
       authMode: toAnthropicAuthMode(authMode),
       customModels: savedModels,
+      thinkingOverrides,
     });
   }
 

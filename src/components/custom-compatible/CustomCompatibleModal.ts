@@ -1,7 +1,18 @@
 import { App, ButtonComponent, Modal, Notice, Setting } from 'obsidian';
-import type { AnthropicCompatibleAuthMode, AntigravityCompatibleAuthMode, AntigravityCompatibleWireProtocol, LLMProviderConfig } from '../../types/llm/ProviderTypes';
+import type {
+  AnthropicCompatibleAuthMode,
+  AntigravityCompatibleAuthMode,
+  AntigravityCompatibleWireProtocol,
+  LLMProviderConfig,
+  ResponsesCompatibleAuthMode,
+  ResponsesCompatibleStateMode,
+} from '../../types/llm/ProviderTypes';
 import { generateUUID } from '../../utils/uuid';
 import type { OpenAICompatibleContextCheckResult } from '../../services/llm/adapters/openai-compatible/OpenAICompatibleContextCheck';
+import {
+  describeThinkingCapability,
+  type CompatibleThinkingProbeResult,
+} from '../../services/llm/adapters/shared/CompatibleThinkingProbe';
 import { CustomCompatibleEndpointConfig, CustomCompatibleEditSession, CustomCompatibleKind, copyCustomEndpoint, isCustomEndpoint } from './CustomCompatibleEditSession';
 
 interface ContextNote {
@@ -35,6 +46,19 @@ export function describeContextCheck(result: OpenAICompatibleContextCheckResult)
   }
 }
 
+export function describeThinkingProbe(result: CompatibleThinkingProbeResult): ContextNote {
+  switch (result.kind) {
+    case 'supported':
+      return result.efforts.length > 0
+        ? { text: `Thinking tiers unlocked: ${result.efforts.join(', ')}.`, warning: false }
+        : { text: 'Thinking is supported by this model.', warning: false };
+    case 'unsupported':
+      return { text: 'Thinking is not supported by this model.', warning: false };
+    case 'failed':
+      return { text: `Thinking probe failed. ${result.message}`, warning: true };
+  }
+}
+
 export interface CustomCompatibleModalOptions {
   kind: CustomCompatibleKind;
   getProviders: () => Record<string, LLMProviderConfig>;
@@ -62,18 +86,37 @@ export class CustomCompatibleModal extends Modal {
   }
 
   private get label(): string {
-    return this.options.kind === 'anthropic-compatible' ? 'Anthropic-compatible' : 'Antigravity-compatible';
+    switch (this.options.kind) {
+      case 'responses-compatible':
+        return 'Responses-compatible';
+      case 'anthropic-compatible':
+        return 'Anthropic-compatible';
+      case 'antigravity-compatible':
+        return 'Antigravity-compatible';
+    }
   }
 
   private endpointOf(config: CustomCompatibleEndpointConfig) {
-    return config.driverKind === 'anthropic-compatible' ? config.anthropicCompatible : config.antigravityCompatible;
+    switch (config.driverKind) {
+      case 'responses-compatible':
+        return config.responsesCompatible;
+      case 'anthropic-compatible':
+        return config.anthropicCompatible;
+      case 'antigravity-compatible':
+        return config.antigravityCompatible;
+    }
   }
 
   private newEndpoint(): CustomCompatibleEndpointConfig {
     const endpoint = { schemaVersion: 1 as const, displayName: '', baseUrl: '', models: {} };
-    return this.options.kind === 'anthropic-compatible'
-      ? { apiKey: '', enabled: false, driverKind: 'anthropic-compatible', models: {}, anthropicCompatible: endpoint }
-      : { apiKey: '', enabled: false, driverKind: 'antigravity-compatible', models: {}, antigravityCompatible: endpoint };
+    switch (this.options.kind) {
+      case 'responses-compatible':
+        return { apiKey: '', enabled: false, driverKind: 'responses-compatible', models: {}, responsesCompatible: endpoint };
+      case 'anthropic-compatible':
+        return { apiKey: '', enabled: false, driverKind: 'anthropic-compatible', models: {}, anthropicCompatible: endpoint };
+      case 'antigravity-compatible':
+        return { apiKey: '', enabled: false, driverKind: 'antigravity-compatible', models: {}, antigravityCompatible: endpoint };
+    }
   }
 
   private describeContextWindow(editor: CustomCompatibleEditSession, model: string): string {
@@ -208,7 +251,12 @@ export class CustomCompatibleModal extends Modal {
     new Setting(this.body).setName('API base URL').setDesc('Use the full base address, including any path such as /v1.').addText(text => {
       text.inputEl.type = 'url';
       text.inputEl.addClass('nexus-compatible-url-input');
-      text.setPlaceholder(this.options.kind === 'anthropic-compatible' ? 'https://api.example.com' : 'https://gateway.example.com/antigravity').setValue(editor.endpoint.baseUrl).onChange(value => {
+      const baseUrlPlaceholder = this.options.kind === 'responses-compatible'
+        ? 'https://api.example.com/v1'
+        : this.options.kind === 'anthropic-compatible'
+          ? 'https://api.example.com'
+          : 'https://gateway.example.com/antigravity';
+      text.setPlaceholder(baseUrlPlaceholder).setValue(editor.endpoint.baseUrl).onChange(value => {
         editor.setBaseUrl(value);
         this.feedback.setText('Connection changed. Connect to discover models.');
         this.renderModels();
@@ -224,6 +272,14 @@ export class CustomCompatibleModal extends Modal {
         this.changed();
       });
     });
+    if (editor.draft.driverKind === 'responses-compatible') {
+      const responsesEndpoint = editor.draft.responsesCompatible;
+      new Setting(this.body).setName('Continuation mode').addDropdown(dropdown => dropdown
+        .addOption('stateless', 'Stateless (full input replay)')
+        .addOption('stateful', 'Stateful (previous response ID)')
+        .setValue(responsesEndpoint.stateMode ?? 'stateless')
+        .onChange(value => { editor.setResponsesStateMode(value as ResponsesCompatibleStateMode); this.changed(); }));
+    }
     if (editor.draft.driverKind === 'antigravity-compatible') {
       new Setting(this.body).setName('Protocol mode').addDropdown(dropdown => dropdown
         .addOption('auto', 'Auto (Gemini v1beta + Claude messages)')
@@ -233,7 +289,11 @@ export class CustomCompatibleModal extends Modal {
         .onChange(value => { editor.setAntigravityWireProtocol(value as AntigravityCompatibleWireProtocol); this.changed(); }));
     }
     new Setting(this.body).setName('Auth header').addDropdown(dropdown => {
-      if (editor.draft.driverKind === 'anthropic-compatible') {
+      if (editor.draft.driverKind === 'responses-compatible') {
+        dropdown.addOption('bearer', 'Authorization: Bearer').addOption('x-api-key', 'API key header').addOption('both', 'Both headers')
+          .setValue(editor.draft.responsesCompatible.authMode ?? 'bearer')
+          .onChange(value => { editor.setResponsesAuthMode(value as ResponsesCompatibleAuthMode); this.changed(); });
+      } else if (editor.draft.driverKind === 'anthropic-compatible') {
         dropdown.addOption('x-api-key', 'API key header').addOption('bearer', 'Authorization: Bearer').addOption('both', 'Both headers')
           .setValue(editor.draft.anthropicCompatible.authMode ?? 'x-api-key')
           .onChange(value => { editor.setAnthropicAuthMode(value as AnthropicCompatibleAuthMode); this.changed(); });
@@ -310,6 +370,10 @@ export class CustomCompatibleModal extends Modal {
     const describe = (): void => {
       setting.descEl.empty();
       setting.descEl.createDiv({ text: this.describeContextWindow(editor, model) });
+      const thinkingSummary = describeThinkingCapability(editor.endpoint.models[model]);
+      if (thinkingSummary) {
+        setting.descEl.createDiv({ text: thinkingSummary });
+      }
       if (!note) return;
       const line = setting.descEl.createDiv({ cls: note.warning ? 'nexus-compatible-check mod-warning' : 'nexus-compatible-check', text: note.text });
       line.setAttribute('role', 'status');
@@ -366,6 +430,32 @@ export class CustomCompatibleModal extends Modal {
           } finally {
             this.checks.delete(controller);
             button.setDisabled(false).setButtonText('Check');
+          }
+          describe();
+        });
+    });
+    setting.addButton(button => {
+      button.setButtonText('Probe')
+        .setTooltip('Sends minimal requests to detect which thinking effort tiers your server accepts for this model.')
+        .onClick(async () => {
+          const controller = new AbortController();
+          this.checks.add(controller);
+          button.setDisabled(true).setButtonText('Probing…');
+          note = { text: 'Probing thinking tiers…', warning: false };
+          describe();
+          try {
+            const result = await editor.probeThinking(model, controller.signal);
+            if (controller.signal.aborted || this.editor !== editor) return;
+            if (result.kind !== 'failed') {
+              this.changed();
+            }
+            note = describeThinkingProbe(result);
+          } catch (error) {
+            if (controller.signal.aborted || this.editor !== editor) return;
+            note = { text: `Thinking probe failed. ${error instanceof Error ? error.message : 'The server could not be reached.'}`, warning: true };
+          } finally {
+            this.checks.delete(controller);
+            button.setDisabled(false).setButtonText('Probe');
           }
           describe();
         });

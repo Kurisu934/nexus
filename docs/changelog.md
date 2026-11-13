@@ -2,6 +2,13 @@
 
 ## November 2026
 
+**v5.24.0** — Third-party OpenAI Responses endpoints and probe-driven thinking tiers across all compatible protocols
+
+- Connect third-party OpenAI Responses API servers and gateways (`/v1/responses` and `/codex/responses`) under **Settings -> Nexus -> Providers -> Responses-compatible**. Supports stateless full-input replay (`store: false`, default for multi-account gateways) and stateful `previous_response_id` continuations, `Bearer` / `x-api-key` / dual auth headers, automatic SSE collection fallback on stream-only Codex backends, reasoning summaries, and native function calling.
+- Unlock exact thinking effort tiers (`low`, `medium`, `high`, `xhigh`, `max`) per model from discovery metadata and active endpoint probing across **OpenAI-compatible**, **Responses-compatible**, **Anthropic-compatible**, and **Antigravity-compatible** providers. **Connect** automatically reads server-advertised reasoning capabilities (`supported_reasoning_levels`, `reasoning`, `thinking`), and each model's **Probe** action detects accepted effort tiers and wire modes (`adaptive` vs `budget`, `thinkingLevel` vs `thinkingBudget`, and `reasoning_effort`) to expose only supported levels in chat settings and clamp outbound requests.
+
+---
+
 **v5.23.0** — Third-party Anthropic-compatible and Antigravity-compatible gateway endpoints
 
 - Connect third-party Anthropic Messages API servers and gateways under **Settings -> Nexus -> Providers -> Anthropic-compatible**. Add multiple named endpoints with custom base URLs (root, `/v1`, or prefixed routes), choose `x-api-key`, `Authorization: Bearer`, or dual auth headers, discover models from `/v1/models` or add model IDs manually, and run full streaming chat with native tool calling, extended/adaptive thinking, and vision.

@@ -12,6 +12,10 @@ import {
 } from '../types';
 import { isOpenAICompatibleModelId } from '../openai-compatible/OpenAICompatibleConfig';
 import {
+  resolveDefinitionThinking,
+  type ResolvedCompatibleModelThinking,
+} from '../shared/CompatibleEndpointUtils';
+import {
   ANTHROPIC_COMPATIBLE_CONTEXT_WINDOW,
   buildAnthropicCompatibleModels,
   validateAnthropicCompatibleConfig,
@@ -33,12 +37,20 @@ export class AnthropicCompatibleAdapter extends BaseAdapter {
     this.name = instanceId;
     this.baseUrl = resolved.baseUrl;
     this.savedModels = savedModels;
+    const thinkingOverrides: Record<string, ResolvedCompatibleModelThinking> = {};
+    for (const [id, definition] of Object.entries(config.anthropicCompatible?.models ?? {})) {
+      const resolvedThinking = resolveDefinitionThinking(definition);
+      if (resolvedThinking.source !== 'default') {
+        thinkingOverrides[id] = resolvedThinking;
+      }
+    }
     this.delegate = new AnthropicAdapter(config.apiKey, savedModels[0]?.id, {
       instanceName: instanceId,
       baseUrl: resolved.baseUrl,
       messagesUrl: resolved.messagesUrl,
       authMode: config.anthropicCompatible?.authMode ?? 'x-api-key',
       customModels: savedModels,
+      thinkingOverrides,
     });
   }
 

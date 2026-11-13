@@ -24,7 +24,7 @@ import {
 import type { ChatRuntimeEvent } from '../runtime/ChatRuntimeEvent';
 import { mapProviderStreamChunk } from '../runtime/ProviderStreamEventMapper';
 import { streamWithOverloadRetry } from '../adapters/shared/OverloadRetry';
-import { resolveProviderWireFamily } from '../adapters/shared/CompatibleEndpointUtils';
+import { resolveProviderWireFamily, resolveResponsesStateMode } from '../adapters/shared/CompatibleEndpointUtils';
 
 // Union type for tool calls from different sources
 type ToolCallUnion = AdapterToolCall | ChatToolCall;
@@ -52,7 +52,11 @@ export class ToolContinuationService {
     chunk: { metadata?: Record<string, unknown> },
     options?: StreamingOptions
   ): void {
-    if (provider !== 'openai' && provider !== 'openai-codex') {
+    if (
+      provider !== 'openai' &&
+      provider !== 'openai-codex' &&
+      !(provider.startsWith('responses-compatible-') && resolveResponsesStateMode(provider) === 'stateful')
+    ) {
       return;
     }
 

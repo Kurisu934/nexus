@@ -126,6 +126,17 @@ export function createBuiltinProviderDrivers(): BuiltinProviderDriverRegistratio
       },
     }),
     defineDriver({
+      kind: 'responses-compatible',
+      displayName: 'Responses compatible',
+      compatibility: 'all',
+      shouldInitialize: (config) => config?.enabled === true && config.driverKind === 'responses-compatible',
+      createAdapter: async ({ config, instanceId }) => {
+        // Dynamic import keeps adapter modules off the mobile startup graph.
+        const { ResponsesCompatibleAdapter } = await import('../adapters/responses-compatible/ResponsesCompatibleAdapter');
+        return new ResponsesCompatibleAdapter(config, instanceId);
+      },
+    }),
+    defineDriver({
       kind: 'anthropic-compatible',
       displayName: 'Anthropic compatible',
       compatibility: 'all',

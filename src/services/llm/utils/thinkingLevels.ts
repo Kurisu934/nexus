@@ -21,7 +21,12 @@
  */
 
 import type { ThinkingEffort } from '../../../types/llm/ProviderTypes';
-import { resolveProviderWireFamily, stripCompatibleModelPrefix } from '../adapters/shared/CompatibleEndpointUtils';
+import {
+  clampEffortToSupportedTiers,
+  resolveCompatibleModelThinking,
+  resolveProviderWireFamily,
+  stripCompatibleModelPrefix
+} from '../adapters/shared/CompatibleEndpointUtils';
 import {
   clampThinkingEffortToHigh,
   isAnthropicAdaptiveThinkingModel,
@@ -43,6 +48,15 @@ function isMistralLarge4(model: string): boolean {
 }
 
 function getEffortBehaviour(provider: string, model: string): EffortBehaviour | null {
+  const detected = resolveCompatibleModelThinking(provider, model);
+  if (detected?.efforts && detected.efforts.length > 0) {
+    const supportedEfforts = detected.efforts;
+    return (effort: ThinkingEffort) => clampEffortToSupportedTiers(effort, supportedEfforts);
+  }
+  if (provider.startsWith('responses-compatible-')) {
+    const bareModel = stripCompatibleModelPrefix(model);
+    return (effort) => mapOpenAIThinkingEffort(effort, bareModel);
+  }
   if (provider.startsWith('anthropic-compatible-') || provider.startsWith('antigravity-compatible-')) {
     const bareModel = stripCompatibleModelPrefix(model);
     const family = resolveProviderWireFamily(provider, model);

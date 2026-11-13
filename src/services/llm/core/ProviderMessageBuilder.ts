@@ -21,7 +21,7 @@ import { synthesizeToolCallId } from '../utils/toolCallId';
 import type { ToolExecutionOrigin } from '../../../types/tools/ToolOperationTypes';
 import { getMessageText, type ConversationMessage, type ToolCallUnion } from './ConversationMessage';
 import { toResponsesInputItems } from '../adapters/shared/OpenAIResponsesInput';
-import { resolveProviderWireFamily } from '../adapters/shared/CompatibleEndpointUtils';
+import { resolveProviderWireFamily, resolveResponsesStateMode } from '../adapters/shared/CompatibleEndpointUtils';
 
 // The message type lives in ./ConversationMessage; re-exported so existing
 // imports keep resolving.
@@ -221,6 +221,9 @@ export class ProviderMessageBuilder {
     const wireFamily = resolveProviderWireFamily(provider, generateOptions.model);
     const isAnthropicModel = wireFamily === 'anthropic';
     const isGoogleModel = wireFamily === 'google';
+    const isResponsesModel = wireFamily === 'responses';
+    const isStatefulResponses = isResponsesModel && resolveResponsesStateMode(provider) === 'stateful';
+    const isStatelessResponses = isResponsesModel && !isStatefulResponses;
     if (isAnthropicModel) {
       // Append to the actual prior request. Rebuilding from previousMessages
       // moves the original user prompt between recursive tool rounds, splitting
@@ -254,7 +257,7 @@ export class ProviderMessageBuilder {
         conversationHistory,
         systemPrompt: generateOptions.systemPrompt
       };
-    } else if (provider === 'openai-codex') {
+    } else if (provider === 'openai-codex' || isStatelessResponses) {
       // Codex uses stateless Responses API — no previous_response_id.
       // Build a full input array: prior messages + user prompt + function_call + function_call_output items.
       // Initial options already flatten stored history to Responses input items.
@@ -267,8 +270,9 @@ export class ProviderMessageBuilder {
 
       // Synthesize ids for any tool calls missing them. Codex/Responses API
       // strictly requires call_id on every function_call and function_call_output.
+      const synthPrefix = isStatelessResponses ? 'responses' : 'codex';
       const synthesizedIds = toolCalls.map((tc) =>
-        tc.id || synthesizeToolCallId('codex')
+        tc.id || synthesizeToolCallId(synthPrefix)
       );
 
       // Add function_call items (what the model called)
@@ -289,7 +293,7 @@ export class ProviderMessageBuilder {
         const result = toolResults[i];
         inputItems.push({
           type: 'function_call_output',
-          call_id: synthesizedIds[i] || result.id || `call_synth_codex_result_${Date.now()}_${i}`,
+          call_id: synthesizedIds[i] || result.id || `call_synth_${synthPrefix}_result_${Date.now()}_${i}`,
           output: result.success
             ? JSON.stringify(result.result || {})
             : JSON.stringify({ error: result.error || 'Tool execution failed' })
@@ -302,7 +306,7 @@ export class ProviderMessageBuilder {
         systemPrompt: generateOptions.systemPrompt,
         tools: generateOptions.tools
       };
-    } else if (provider === 'openai') {
+    } else if (provider === 'openai' || isStatefulResponses) {
       // OpenAI uses Responses API with function_call_output items + previous_response_id
       // State is reliably tracked on OpenAI's servers
       const toolInput = ConversationContextBuilder.buildResponsesAPIToolInput(
@@ -412,7 +416,11 @@ export class ProviderMessageBuilder {
         systemPrompt: systemPrompt || extractedSystemPrompt,
         ...shared
       };
-    } else if (provider === 'openai' || provider === 'openai-codex') {
+    } else if (
+      provider === 'openai' ||
+      provider === 'openai-codex' ||
+      resolveProviderWireFamily(provider, model) === 'responses'
+    ) {
       // Responses API: the adapter sends `conversationHistory` verbatim as `input`,
       // so the latest user message is included as the last item.
       generateOptions = {

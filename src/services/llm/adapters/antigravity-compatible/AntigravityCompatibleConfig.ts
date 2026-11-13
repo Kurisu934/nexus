@@ -20,8 +20,14 @@ import { ProviderHttpClient } from '../shared/ProviderHttpClient';
 import {
   isClaudeFamilyModelId,
   resolveAntigravityModelWire,
+  resolveDefinitionThinking,
   stripCompatibleModelPrefix,
 } from '../shared/CompatibleEndpointUtils';
+import {
+  probeAnthropicMessagesThinking,
+  probeGeminiV1BetaThinking,
+  type CompatibleThinkingProbeResult,
+} from '../shared/CompatibleThinkingProbe';
 import {
   runCalibratedContextWindowCheck,
   sendAnthropicMessagesContextProbe,
@@ -84,7 +90,7 @@ export function buildAntigravityCompatibleModels(config: LLMProviderConfig): Mod
         maxOutputTokens: defaults.maxTokens ?? ANTIGRAVITY_COMPATIBLE_MAX_OUTPUT_TOKENS,
         supportsStreaming: true,
         supportsFunctions: true,
-        supportsThinking: true,
+        supportsThinking: resolveDefinitionThinking(definitions[id]).supportsThinking ?? true,
         supportsImages: true,
         supportsJSON: true,
         pricing: null,
@@ -272,9 +278,17 @@ export async function discoverAntigravityCompatibleModels(
     for (const model of source.models) {
       const existing = merged.get(model.id);
       if (!existing) {
-        merged.set(model.id, model);
-      } else if (existing.contextWindow === undefined && model.contextWindow !== undefined) {
-        merged.set(model.id, model);
+        merged.set(model.id, { ...model });
+        continue;
+      }
+      if (existing.contextWindow === undefined && model.contextWindow !== undefined) {
+        existing.contextWindow = model.contextWindow;
+      }
+      if (existing.supportsThinking === undefined && model.supportsThinking !== undefined) {
+        existing.supportsThinking = model.supportsThinking;
+      }
+      if (existing.thinkingEfforts === undefined && model.thinkingEfforts !== undefined) {
+        existing.thinkingEfforts = model.thinkingEfforts;
       }
     }
   }
@@ -317,4 +331,33 @@ export async function checkAntigravityCompatibleContextWindow(request: {
       signal: request.signal,
     })
   );
+}
+
+export async function probeAntigravityCompatibleModelThinking(request: {
+  baseUrl: string;
+  apiKey: string;
+  wireProtocol?: AntigravityCompatibleWireProtocol;
+  authMode?: AntigravityCompatibleAuthMode;
+  model: string;
+  signal?: AbortSignal;
+}): Promise<CompatibleThinkingProbeResult> {
+  const urls = resolveAntigravityCompatibleUrls(request.baseUrl);
+  const authMode = request.authMode ?? 'both';
+  const wire = resolveAntigravityModelWire(request.model, request.wireProtocol ?? 'auto');
+  if (wire === 'anthropic') {
+    return probeAnthropicMessagesThinking({
+      messagesUrl: urls.messagesUrl,
+      headers: antigravityMessagesHeaders(request.apiKey, authMode),
+      provider: 'antigravity-compatible',
+      model: request.model,
+      signal: request.signal,
+    });
+  }
+  return probeGeminiV1BetaThinking({
+    v1betaBaseUrl: urls.v1betaBaseUrl,
+    headers: antigravityV1BetaHeaders(request.apiKey, authMode),
+    provider: 'antigravity-compatible',
+    model: request.model,
+    signal: request.signal,
+  });
 }

@@ -440,7 +440,9 @@ export class LLMProviderManager {
           ? 'Models from an Anthropic-compatible endpoint'
           : config.driverKind === 'antigravity-compatible'
             ? 'Models from an Antigravity-compatible gateway'
-            : 'Models from an OpenAI-compatible endpoint'
+            : config.driverKind === 'responses-compatible'
+              ? 'Models from an OpenAI Responses-compatible endpoint'
+              : 'Models from an OpenAI-compatible endpoint'
       }));
 
     return [...supportedProviders, ...configuredProviders].map(provider => {

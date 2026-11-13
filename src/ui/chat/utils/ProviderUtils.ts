@@ -257,8 +257,8 @@ export class ProviderUtils {
     return {
       streaming: this.supportsStreaming(providerId),
       functionCalling: this.supportsFunctionCalling(providerId),
-      imageInput: providerId.startsWith('anthropic-compatible-') || providerId.startsWith('antigravity-compatible-') || ['openai', 'anthropic', 'anthropic-claude-code', 'google', 'google-gemini-cli', 'github-copilot'].includes(providerId),
-      jsonMode: providerId.startsWith('anthropic-compatible-') || providerId.startsWith('antigravity-compatible-') || ['openai', 'mistral', 'deepseek'].includes(providerId)
+      imageInput: providerId.startsWith('responses-compatible-') || providerId.startsWith('anthropic-compatible-') || providerId.startsWith('antigravity-compatible-') || ['openai', 'anthropic', 'anthropic-claude-code', 'google', 'google-gemini-cli', 'github-copilot'].includes(providerId),
+      jsonMode: providerId.startsWith('responses-compatible-') || providerId.startsWith('anthropic-compatible-') || providerId.startsWith('antigravity-compatible-') || ['openai', 'mistral', 'deepseek'].includes(providerId)
     };
   }
 }

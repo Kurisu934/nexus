@@ -263,7 +263,11 @@ export class ThinkingEffortMapper {
   static providerSupportsThinking(providerId: string): boolean {
     const supportedProviders = ['anthropic', 'openai', 'google', 'gemini', 'openrouter', 'groq', 'deepseek'];
     const normalized = providerId.toLowerCase();
-    return normalized.startsWith('anthropic-compatible-') || normalized.startsWith('antigravity-compatible-') || supportedProviders.includes(normalized);
+    return normalized.startsWith('openai-compatible-')
+      || normalized.startsWith('anthropic-compatible-')
+      || normalized.startsWith('antigravity-compatible-')
+      || normalized.startsWith('responses-compatible-')
+      || supportedProviders.includes(normalized);
   }
 
   /**
