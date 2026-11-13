@@ -29,7 +29,7 @@ export function setAntigravityWireProtocol(
   antigravityWireModes.set(instanceId, protocol);
 }
 
-/** Strip optional gateway prefix (`agy_paid/gemini-4-carbon`) and `:1m` suffix. */
+/** Strip optional gateway prefix (`google/gemini-4-carbon`) and `:1m` suffix. */
 export function stripCompatibleModelPrefix(modelId: string): string {
   const withoutVariant = modelId.replace(':1m', '');
   const slashIndex = withoutVariant.lastIndexOf('/');

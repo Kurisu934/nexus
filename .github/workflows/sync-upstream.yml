@@ -1,0 +1,185 @@
+name: Sync upstream & release
+
+on:
+  schedule:
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: 'Rebuild and cut a new patch release even when upstream has no new commits'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+  issues: write
+
+concurrency:
+  group: sync-upstream-main
+  cancel-in-progress: false
+
+jobs:
+  sync-and-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22.x'
+          cache: npm
+
+      - name: Configure Git and fetch upstream
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git remote get-url upstream >/dev/null 2>&1; then
+            git remote add upstream https://github.com/ProfSynapse/nexus.git
+          else
+            git remote set-url upstream https://github.com/ProfSynapse/nexus.git
+          fi
+          git fetch upstream main --no-tags
+          git fetch origin --tags --force
+
+      - name: Merge upstream changes
+        id: merge
+        env:
+          FORCE_BUILD: ${{ inputs.force_build }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          LOG_FILE="$(mktemp)"
+          BODY_FILE=""
+          trap 'rm -f "$LOG_FILE" "${BODY_FILE:-}"' EXIT
+
+          ARGS=(--upstream-ref upstream/main --origin-remote origin)
+          if [ "${FORCE_BUILD:-false}" = "true" ]; then
+            ARGS+=(--force-build)
+          fi
+
+          set +e
+          node scripts/sync-upstream-merge.mjs "${ARGS[@]}" 2>&1 | tee "$LOG_FILE"
+          EXIT_CODE="${PIPESTATUS[0]}"
+          set -e
+
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "::error::scripts/sync-upstream-merge.mjs failed with exit code ${EXIT_CODE}"
+            ISSUE_TITLE="Upstream sync conflict with ProfSynapse/nexus"
+            UPSTREAM_HEAD="$(git rev-parse --short upstream/main 2>/dev/null || echo 'unknown')"
+            LOG_TAIL="$(tail -n 120 "$LOG_FILE" | tail -c 50000 || true)"
+
+            BODY_FILE="$(mktemp)"
+            {
+              printf 'Automated upstream sync from `ProfSynapse/nexus` (`upstream/main` @ `%s`) failed with exit code `%s`.\n\n' "$UPSTREAM_HEAD" "$EXIT_CODE"
+              printf 'Workflow run: %s\n\n' "$RUN_URL"
+              printf '<details>\n<summary>Sync output (last 120 lines)</summary>\n\n```text\n%s\n```\n</details>\n' "$LOG_TAIL"
+            } > "$BODY_FILE"
+
+            EXISTING_ISSUE="$(gh issue list --state open --limit 200 --json number,title | node -e '
+              const fs = require("fs");
+              const issues = JSON.parse(fs.readFileSync(0, "utf8"));
+              const match = issues.find((i) => i.title === process.argv[1]);
+              if (match) process.stdout.write(String(match.number));
+            ' "$ISSUE_TITLE")"
+
+            if [ -n "$EXISTING_ISSUE" ]; then
+              gh issue comment "$EXISTING_ISSUE" --body-file "$BODY_FILE"
+            else
+              gh issue create --title "$ISSUE_TITLE" --body-file "$BODY_FILE"
+            fi
+            exit 1
+          fi
+
+      - name: Install dependencies
+        if: steps.merge.outputs.synced == 'true'
+        env:
+          LOCKFILE_REGEN: ${{ steps.merge.outputs.lockfile_regen }}
+        run: |
+          if [ "$LOCKFILE_REGEN" = "true" ]; then
+            npm install --package-lock-only --ignore-scripts
+          fi
+          npm ci
+
+      - name: Bump version and regenerate tool schemas
+        if: steps.merge.outputs.synced == 'true'
+        env:
+          TARGET_VERSION: ${{ steps.merge.outputs.target_version }}
+        run: npm version "$TARGET_VERSION" --no-git-tag-version --allow-same-version
+
+      - name: Build and verify
+        if: steps.merge.outputs.synced == 'true'
+        run: |
+          npm run build
+          # Re-bundle main.js once after generate-connector-content.mjs refreshed connectorContent.ts
+          node esbuild.config.mjs production
+          npm test
+
+      - name: Commit and push merge and release tag
+        if: steps.merge.outputs.synced == 'true'
+        env:
+          TARGET_VERSION: ${{ steps.merge.outputs.target_version }}
+          UPSTREAM_SHA: ${{ steps.merge.outputs.upstream_sha }}
+        run: |
+          TAG="$TARGET_VERSION"
+          git add -A
+          git commit -m "chore(sync): merge upstream ProfSynapse/nexus (${UPSTREAM_SHA}) and release ${TAG}"
+          git tag "$TAG"
+          git push origin main "$TAG"
+
+      - name: Package plugin zip
+        if: steps.merge.outputs.synced == 'true'
+        env:
+          TARGET_VERSION: ${{ steps.merge.outputs.target_version }}
+        run: zip -j "nexus-${TARGET_VERSION}.zip" main.js manifest.json styles.css
+
+      - name: Upload build artifact
+        if: steps.merge.outputs.synced == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-${{ steps.merge.outputs.target_version }}
+          path: |
+            main.js
+            manifest.json
+            styles.css
+            nexus-${{ steps.merge.outputs.target_version }}.zip
+            schemas/${{ steps.merge.outputs.target_version }}/cli-tools.json
+            schemas/${{ steps.merge.outputs.target_version }}/mcp-tools.json
+
+      - name: Create GitHub release
+        if: steps.merge.outputs.synced == 'true'
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.merge.outputs.target_version }}
+          name: ${{ steps.merge.outputs.target_version }}
+          files: |
+            main.js
+            manifest.json
+            styles.css
+            nexus-${{ steps.merge.outputs.target_version }}.zip
+            schemas/${{ steps.merge.outputs.target_version }}/cli-tools.json
+            schemas/${{ steps.merge.outputs.target_version }}/mcp-tools.json
+          generate_release_notes: true
+
+      - name: Attest release assets
+        if: steps.merge.outputs.synced == 'true'
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
+            nexus-${{ steps.merge.outputs.target_version }}.zip
+            schemas/${{ steps.merge.outputs.target_version }}/cli-tools.json
+            schemas/${{ steps.merge.outputs.target_version }}/mcp-tools.json

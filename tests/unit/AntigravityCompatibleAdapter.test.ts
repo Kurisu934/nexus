@@ -14,7 +14,7 @@ import { collect, concatContent, jsonResponse, sse, sseResponse, type CapturedRe
 function config(wireProtocol: AntigravityCompatibleWireProtocol = 'auto'): LLMProviderConfig {
   return { apiKey: 'secret', enabled: true, driverKind: 'antigravity-compatible', antigravityCompatible: {
     schemaVersion: 1, displayName: 'Gateway', baseUrl: 'https://gw.example.com/antigravity', wireProtocol,
-    models: { 'gemini-4-carbon': { source: 'manual' }, 'claude-opus-5-5': { source: 'manual' }, 'agy_paid/gemini-4-carbon': { source: 'manual' } },
+    models: { 'gemini-4-carbon': { source: 'manual' }, 'claude-opus-5-5': { source: 'manual' }, 'google/gemini-4-carbon': { source: 'manual' } },
   } };
 }
 const messagesResponse = sseResponse(sse(
@@ -81,7 +81,7 @@ describe('Antigravity-compatible streaming', () => {
     expect(concatContent(chunks)).toBe('Claude answer');
     expect(chunks.at(-1)).toMatchObject({ complete: true });
   });
-  it.each(['claude-opus-5-5', 'agy_paid/gemini-4-carbon'])('routes %s to v1beta without losing model segments', async model => {
+  it.each(['claude-opus-5-5', 'google/gemini-4-carbon'])('routes %s to v1beta without losing model segments', async model => {
     const requests: CapturedRequest[] = [];
     __setRequestUrlMock(async request => { requests.push(request); return googleResponse; });
     const chunks = await collect(new AntigravityCompatibleAdapter(config('v1beta'), 'antigravity-compatible-v1beta').generateStreamAsync('Hi', { model }));
