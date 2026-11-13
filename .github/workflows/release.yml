@@ -4,7 +4,7 @@ on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
-
+  workflow_dispatch:
 permissions:
   contents: write
   id-token: write
@@ -28,10 +28,15 @@ jobs:
         run: npm ci
 
       - name: Validate version metadata
+        id: meta
         run: |
-          TAG="${{ github.ref_name }}"
           MANIFEST_VERSION=$(node -p "require('./manifest.json').version")
           PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="$MANIFEST_VERSION"
+          fi
           if [ "$TAG" != "$MANIFEST_VERSION" ]; then
             echo "::error::Tag $TAG does not match manifest.json version $MANIFEST_VERSION"; exit 1
           fi
@@ -40,20 +45,39 @@ jobs:
           fi
           node -e "const v=require('./versions.json'); if(!v['$TAG']){console.error('::error::versions.json has no entry for $TAG');process.exit(1)}"
           node -e "const s=require('./schemas/manifest.json'); if(s.latest!=='$TAG'||!s.versions['$TAG']){console.error('::error::schema catalog is not generated for '+ '$TAG');process.exit(1)}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Build release assets
         run: npm run build
 
+      - name: Package plugin zip
+        run: |
+          zip -j "nexus-${{ steps.meta.outputs.tag }}.zip" main.js manifest.json styles.css
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-${{ steps.meta.outputs.tag }}
+          path: |
+            main.js
+            manifest.json
+            styles.css
+            nexus-${{ steps.meta.outputs.tag }}.zip
+            schemas/${{ steps.meta.outputs.tag }}/cli-tools.json
+            schemas/${{ steps.meta.outputs.tag }}/mcp-tools.json
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v3
         with:
-          name: ${{ github.ref_name }}
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.tag }}
           files: |
             main.js
             manifest.json
             styles.css
-            schemas/${{ github.ref_name }}/cli-tools.json
-            schemas/${{ github.ref_name }}/mcp-tools.json
+            nexus-${{ steps.meta.outputs.tag }}.zip
+            schemas/${{ steps.meta.outputs.tag }}/cli-tools.json
+            schemas/${{ steps.meta.outputs.tag }}/mcp-tools.json
           generate_release_notes: true
 
       - name: Attest release assets
@@ -63,5 +87,6 @@ jobs:
             main.js
             manifest.json
             styles.css
-            schemas/${{ github.ref_name }}/cli-tools.json
-            schemas/${{ github.ref_name }}/mcp-tools.json
+            nexus-${{ steps.meta.outputs.tag }}.zip
+            schemas/${{ steps.meta.outputs.tag }}/cli-tools.json
+            schemas/${{ steps.meta.outputs.tag }}/mcp-tools.json
