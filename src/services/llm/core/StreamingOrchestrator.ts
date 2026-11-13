@@ -27,6 +27,7 @@ import type { BaseAdapter } from '../adapters/BaseAdapter';
 import type { ChatRuntimeEvent } from '../runtime/ChatRuntimeEvent';
 import { mapProviderStreamChunk } from '../runtime/ProviderStreamEventMapper';
 import { streamWithOverloadRetry } from '../adapters/shared/OverloadRetry';
+import { resolveProviderWireFamily } from '../adapters/shared/CompatibleEndpointUtils';
 
 // Re-export types for backward compatibility
 export type { ConversationMessage, GoogleMessage, StreamingOptions, StreamYield };
@@ -99,7 +100,8 @@ export class StreamingOrchestrator {
     )) {
       state.assistantText += chunk.content;
       if (chunk.toolCalls && chunk.complete) {
-        const responseContent = provider === 'anthropic' && Array.isArray(chunk.metadata?.anthropicResponseContent)
+        const responseContent = resolveProviderWireFamily(provider, generateOptions.model) === 'anthropic'
+          && Array.isArray(chunk.metadata?.anthropicResponseContent)
           ? chunk.metadata.anthropicResponseContent as Array<Record<string, unknown>>
           : undefined;
         if (responseContent) {
@@ -171,7 +173,7 @@ export class StreamingOrchestrator {
     };
 
     // For Google, pass empty string as prompt since conversation is in conversationHistory
-    const isGoogleModel = provider === 'google';
+    const isGoogleModel = resolveProviderWireFamily(provider, model) === 'google';
     const promptToPass = isGoogleModel ? '' : userPrompt;
 
     // Determine the active adapter and provider for streaming.

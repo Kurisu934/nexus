@@ -17,6 +17,7 @@
 
 import type { ModelWithProvider } from '../../../services/StaticModelsService';
 import { getContextWindowOverrideKey } from '../../../ui/chat/utils/ContextWindowSettings';
+import { stripCompatibleModelPrefix } from '../../../services/llm/adapters/shared/CompatibleEndpointUtils';
 
 export interface ModelCapabilities {
   /** False when nothing is known; the Thinking row is shown only for models known to reason. */
@@ -63,6 +64,14 @@ export function getStaticModelCapabilities(
   provider: string | null | undefined,
   model: string | null | undefined
 ): ModelCapabilities | undefined {
+  if (provider && model && (provider.startsWith('anthropic-compatible-') || provider.startsWith('antigravity-compatible-'))) {
+    const bareModel = stripCompatibleModelPrefix(model);
+    const matched = staticModels.findModel('anthropic', bareModel) ?? staticModels.findModel('google', bareModel);
+    return {
+      supportsThinking: matched ? matched.capabilities?.supportsThinking === true : true,
+      supportsSamplingParams: matched ? matched.supportsSamplingParams !== false : true
+    };
+  }
   const spec = findStaticModel(staticModels, provider, model);
   if (!spec) return undefined;
   return {

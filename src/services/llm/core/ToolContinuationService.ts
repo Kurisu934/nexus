@@ -24,14 +24,15 @@ import {
 import type { ChatRuntimeEvent } from '../runtime/ChatRuntimeEvent';
 import { mapProviderStreamChunk } from '../runtime/ProviderStreamEventMapper';
 import { streamWithOverloadRetry } from '../adapters/shared/OverloadRetry';
+import { resolveProviderWireFamily } from '../adapters/shared/CompatibleEndpointUtils';
 
 // Union type for tool calls from different sources
 type ToolCallUnion = AdapterToolCall | ChatToolCall;
 
 export type StreamYield = ChatRuntimeEvent;
 
-function preserveAnthropicResponseContent(chunk: StreamChunk, provider: string): void {
-  if (provider !== 'anthropic' || !chunk.complete || !chunk.toolCalls
+function preserveAnthropicResponseContent(chunk: StreamChunk, provider: string, model?: string): void {
+  if (resolveProviderWireFamily(provider, model) !== 'anthropic' || !chunk.complete || !chunk.toolCalls
     || !Array.isArray(chunk.metadata?.anthropicResponseContent)) return;
   const content = chunk.metadata.anthropicResponseContent as Array<Record<string, unknown>>;
   chunk.toolCalls = chunk.toolCalls.map(call => ({ ...call, anthropic_response_content: content }));
@@ -133,7 +134,7 @@ export class ToolContinuationService {
         options?.abortSignal,
         provider
       )) {
-        preserveAnthropicResponseContent(chunk, provider);
+        preserveAnthropicResponseContent(chunk, provider, continuationOptions.model);
         assistantResponseText += chunk.content;
         for (const event of mapProviderStreamChunk(chunk)) {
           yield event;
@@ -275,7 +276,7 @@ export class ToolContinuationService {
       options?.abortSignal,
       provider
     )) {
-      preserveAnthropicResponseContent(recursiveChunk, provider);
+      preserveAnthropicResponseContent(recursiveChunk, provider, recursiveContinuationOptions.model);
       assistantResponseText += recursiveChunk.content;
       for (const event of mapProviderStreamChunk(recursiveChunk)) {
         yield event;
@@ -447,9 +448,10 @@ export class ToolContinuationService {
     toolResults: ToolResult[],
     model?: string
   ): ConversationMessage[] {
+    const wireFamily = resolveProviderWireFamily(provider, model);
     const updatedMessages = ConversationContextBuilder.appendToolExecution(
-      provider === 'anthropic' ? 'anthropic' :
-      provider === 'google' ? 'google' :
+      wireFamily === 'anthropic' ? 'anthropic' :
+      wireFamily === 'google' ? 'google' :
       provider,
       toolCalls,
       toolResults,

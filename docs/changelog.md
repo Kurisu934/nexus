@@ -2,6 +2,13 @@
 
 ## November 2026
 
+**v5.23.0** — Third-party Anthropic-compatible and Antigravity-compatible gateway endpoints
+
+- Connect third-party Anthropic Messages API servers and gateways under **Settings -> Nexus -> Providers -> Anthropic-compatible**. Add multiple named endpoints with custom base URLs (root, `/v1`, or prefixed routes), choose `x-api-key`, `Authorization: Bearer`, or dual auth headers, discover models from `/v1/models` or add model IDs manually, and run full streaming chat with native tool calling, extended/adaptive thinking, and vision.
+- Connect third-party Antigravity gateways (such as Sub2API and CLIProxyAPI) under **Settings -> Nexus -> Providers -> Antigravity-compatible**. Endpoints support automatic protocol routing (`Gemini v1beta` on `/v1beta` or `/antigravity/v1beta` for Gemini models, and `Anthropic Messages` on `/v1/messages` or `/antigravity/v1/messages` for Claude models) as well as forced `v1beta`-only or `messages`-only modes, dual model discovery, thinking levels/budgets, and `thought_signature` tool continuations.
+
+---
+
 **v5.22.0** — Fable 5.2, Gemini 4 Carbon, and shared audio generation
 
 - Choose Claude Fable 5.2 through Anthropic, Claude Code, OpenRouter or Requesty, and Gemini 4 Carbon through Google, OpenRouter or Requesty. Existing provider defaults stay the same. Carbon uses Gemini 4 thinking levels and request limits.

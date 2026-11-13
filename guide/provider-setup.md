@@ -94,6 +94,18 @@ Chat and standard tool calling work through these endpoints. The endpoint must b
 
 ---
 
+## Anthropic-compatible Endpoints
+
+Choose **Anthropic-compatible** in Providers and add an endpoint with a name, API base URL, and optional API key. Select the authentication header your server expects (`x-api-key`, bearer, or both), then click **Connect** to discover models. Enable the models you want, or add exact model IDs manually. You can adjust and check each model's context window, and delete an endpoint from its list card.
+
+---
+
+## Antigravity-compatible Endpoints
+
+Choose **Antigravity-compatible** in Providers and add your gateway's name, base URL, and optional API key. Select its authentication header and protocol: **Auto** routes Gemini models through v1beta and Claude models through Messages; the other modes force one protocol. Click **Connect** to discover models, or add exact IDs manually, then enable the models you want. Context windows can be adjusted and checked per model. These endpoints are distinct from the desktop Antigravity CLI.
+
+---
+
 ## Claude Code
 
 Use this if you already have [Claude Code](https://claude.ai/download) installed and signed in.

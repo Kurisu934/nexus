@@ -21,6 +21,7 @@ import { synthesizeToolCallId } from '../utils/toolCallId';
 import type { ToolExecutionOrigin } from '../../../types/tools/ToolOperationTypes';
 import { getMessageText, type ConversationMessage, type ToolCallUnion } from './ConversationMessage';
 import { toResponsesInputItems } from '../adapters/shared/OpenAIResponsesInput';
+import { resolveProviderWireFamily } from '../adapters/shared/CompatibleEndpointUtils';
 
 // The message type lives in ./ConversationMessage; re-exported so existing
 // imports keep resolving.
@@ -217,14 +218,9 @@ export class ProviderMessageBuilder {
       if (assistant?.role === 'assistant') assistant.content = generateOptions.assistantResponseText ?? '';
       return { ...generateOptions, conversationHistory, assistantResponseText: undefined };
     }
-    // Check if this is an Anthropic model (direct only)
-    // Note: OpenRouter always uses OpenAI format, even for Anthropic models
-    const isAnthropicModel = provider === 'anthropic';
-
-    // Check if this is a Google model (direct only)
-    // Note: OpenRouter always uses OpenAI format, even for Google models
-    const isGoogleModel = provider === 'google';
-
+    const wireFamily = resolveProviderWireFamily(provider, generateOptions.model);
+    const isAnthropicModel = wireFamily === 'anthropic';
+    const isGoogleModel = wireFamily === 'google';
     if (isAnthropicModel) {
       // Append to the actual prior request. Rebuilding from previousMessages
       // moves the original user prompt between recursive tool rounds, splitting
@@ -425,10 +421,8 @@ export class ProviderMessageBuilder {
         conversationHistory: toResponsesInputItems(nonSystemMessages),
         ...shared
       };
-    } else if (provider === 'google') {
-      // Google adapter uses `conversationHistory` verbatim as `contents`. The
-      // builder emits {role, parts}; anything still in {role, content} form
-      // (e.g. a user message appended after building) is converted here.
+    } else if (resolveProviderWireFamily(provider, model) === 'google') {
+      // Google/Antigravity v1beta adapter uses `conversationHistory` verbatim as `contents`.
       generateOptions = {
         model,
         systemPrompt: extractedSystemPrompt,

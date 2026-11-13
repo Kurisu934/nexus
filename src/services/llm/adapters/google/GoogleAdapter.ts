@@ -20,11 +20,11 @@ import { WebSearchUtils } from '../../utils/WebSearchUtils';
 import { TokenUsageExtractor } from '../../utils/TokenUsageExtractor';
 import { ReasoningPreserver } from '../shared/ReasoningPreserver';
 import { ThinkingEffortMapper, clampThinkingEffortToHigh } from '../../utils/ThinkingEffortMapper';
-import type { ThinkingEffort } from '../../../../types/llm/ProviderTypes';
+import type { AntigravityCompatibleAuthMode, ThinkingEffort } from '../../../../types/llm/ProviderTypes';
 import { ProviderHttpError } from '../shared/ProviderHttpClient';
 import { staticModelToModelInfo, getStaticModelPricing } from '../shared/StaticModelHelpers';
 import { extractStreamErrorMessage } from '../../streaming/streamErrorFrames';
-
+import { stripCompatibleModelPrefix } from '../shared/CompatibleEndpointUtils';
 type JsonObject = Record<string, unknown>;
 
 interface GooglePart extends JsonObject {
@@ -181,12 +181,25 @@ interface GoogleResponse {
   usage?: GoogleUsage;
 }
 
-export class GoogleAdapter extends BaseAdapter {
-  readonly name = 'google';
-  readonly baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+export interface GoogleAdapterOptions {
+  instanceName?: string;
+  baseUrl?: string;
+  authMode?: AntigravityCompatibleAuthMode;
+  customModels?: ModelInfo[];
+}
 
-  constructor(apiKey: string, model?: string) {
+export class GoogleAdapter extends BaseAdapter {
+  readonly name: string;
+  readonly baseUrl: string;
+  private readonly authMode?: AntigravityCompatibleAuthMode;
+  private readonly customModels?: ModelInfo[];
+
+  constructor(apiKey: string, model?: string, options?: GoogleAdapterOptions) {
     super(apiKey, model || GOOGLE_DEFAULT_MODEL);
+    this.name = options?.instanceName || 'google';
+    this.baseUrl = (options?.baseUrl || 'https://generativelanguage.googleapis.com/v1beta').replace(/\/+$/, '');
+    this.authMode = options?.authMode;
+    this.customModels = options?.customModels;
     this.initializeCache();
   }
 
@@ -460,6 +473,9 @@ export class GoogleAdapter extends BaseAdapter {
   }
 
   listModels(): Promise<ModelInfo[]> {
+    if (this.customModels) {
+      return Promise.resolve(this.customModels.map(model => ({ ...model })));
+    }
     try {
       return Promise.resolve(GOOGLE_MODELS.map(model => staticModelToModelInfo(model)));
     } catch (error) {
@@ -592,14 +608,31 @@ export class GoogleAdapter extends BaseAdapter {
   }
 
   private buildGoogleHeaders(): Record<string, string> {
-    return {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': this.apiKey
+    if (this.authMode === undefined) {
+      return {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': this.apiKey
+      };
+    }
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
     };
+    const key = this.apiKey.trim();
+    if (key) {
+      if (this.authMode === 'header-key' || this.authMode === 'both') {
+        headers['x-goog-api-key'] = key;
+      }
+      if (this.authMode === 'bearer' || this.authMode === 'both') {
+        headers['Authorization'] = `Bearer ${key}`;
+      }
+    }
+    return headers;
   }
 
   private buildGenerateContentUrl(model: string, stream: boolean): string {
-    const encodedModel = encodeURIComponent(model);
+    const encodedModel = this.customModels
+      ? model.replace(/^models\//i, '').split('/').map(segment => encodeURIComponent(segment)).join('/')
+      : encodeURIComponent(model);
     return stream
       ? `${this.baseUrl}/models/${encodedModel}:streamGenerateContent?alt=sse`
       : `${this.baseUrl}/models/${encodedModel}:generateContent`;
@@ -658,12 +691,14 @@ export class GoogleAdapter extends BaseAdapter {
   }
 
   private isGemini4StandardModel(model: string): boolean {
-    return model === GOOGLE_ARGON_MODEL || model === 'gemini-4-carbon';
+    const bare = stripCompatibleModelPrefix(model);
+    return bare === GOOGLE_ARGON_MODEL || bare === 'gemini-4-carbon' || bare.startsWith('gemini-4-');
   }
 
   private usesThinkingLevels(model: string): boolean {
     // Only add confirmed model contracts; future Gemini generations may differ.
-    return model.startsWith('gemini-3') || this.isGemini4StandardModel(model);
+    const bare = stripCompatibleModelPrefix(model);
+    return bare.startsWith('gemini-3') || this.isGemini4StandardModel(model);
   }
 
   private getMaxOutputTokens(model: string, stream: boolean, requested?: number): number | undefined {
@@ -890,6 +925,9 @@ export class GoogleAdapter extends BaseAdapter {
   }
 
   getModelPricing(modelId: string): Promise<ModelPricing | null> {
+    if (this.customModels) {
+      return Promise.resolve(null);
+    }
     return Promise.resolve(getStaticModelPricing(GOOGLE_MODELS, modelId));
   }
 }

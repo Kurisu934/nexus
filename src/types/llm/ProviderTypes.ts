@@ -47,16 +47,42 @@ export interface OpenAICompatibleModelDefinition {
   reportedContextWindow?: number;
 }
 
+export type CompatibleDriverKind =
+  | 'openai-compatible'
+  | 'anthropic-compatible'
+  | 'antigravity-compatible';
+
+export type AnthropicCompatibleAuthMode = 'x-api-key' | 'bearer' | 'both';
+
+export type AntigravityCompatibleWireProtocol = 'auto' | 'v1beta' | 'messages';
+
+export type AntigravityCompatibleAuthMode = 'both' | 'bearer' | 'header-key';
+
 /**
  * LLM provider configuration
  */
 export interface LLMProviderConfig {
   /** Implementation family for a named endpoint; omitted for legacy providers. */
-  driverKind?: 'openai-compatible';
+  driverKind?: CompatibleDriverKind;
   openaiCompatible?: {
     schemaVersion: 1;
     displayName: string;
     baseUrl: string;
+    models: Record<string, OpenAICompatibleModelDefinition>;
+  };
+  anthropicCompatible?: {
+    schemaVersion: 1;
+    displayName: string;
+    baseUrl: string;
+    authMode?: AnthropicCompatibleAuthMode;
+    models: Record<string, OpenAICompatibleModelDefinition>;
+  };
+  antigravityCompatible?: {
+    schemaVersion: 1;
+    displayName: string;
+    baseUrl: string;
+    wireProtocol?: AntigravityCompatibleWireProtocol;
+    authMode?: AntigravityCompatibleAuthMode;
     models: Record<string, OpenAICompatibleModelDefinition>;
   };
   apiKey: string;

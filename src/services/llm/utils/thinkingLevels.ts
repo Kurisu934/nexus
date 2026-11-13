@@ -21,6 +21,7 @@
  */
 
 import type { ThinkingEffort } from '../../../types/llm/ProviderTypes';
+import { resolveProviderWireFamily, stripCompatibleModelPrefix } from '../adapters/shared/CompatibleEndpointUtils';
 import {
   clampThinkingEffortToHigh,
   isAnthropicAdaptiveThinkingModel,
@@ -42,6 +43,19 @@ function isMistralLarge4(model: string): boolean {
 }
 
 function getEffortBehaviour(provider: string, model: string): EffortBehaviour | null {
+  if (provider.startsWith('anthropic-compatible-') || provider.startsWith('antigravity-compatible-')) {
+    const bareModel = stripCompatibleModelPrefix(model);
+    const family = resolveProviderWireFamily(provider, model);
+    if (family === 'anthropic') {
+      return isAnthropicAdaptiveThinkingModel(bareModel)
+        ? (effort) => mapAnthropicAdaptiveEffort(effort, bareModel)
+        : null;
+    }
+    if (family === 'google') {
+      return getEffortBehaviour('google', bareModel);
+    }
+    return null;
+  }
   switch (provider) {
     case 'anthropic':
       // Manual-budget models (Claude 4.5 and older) lift Extra high and Max

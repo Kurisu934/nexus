@@ -166,6 +166,8 @@ export const getMobileUnavailableFeatures = (): string[] => {
  */
 export const MOBILE_COMPATIBLE_PROVIDERS = [
     'openai-compatible', // Named HTTP endpoints use requestUrl on mobile
+    'anthropic-compatible',
+    'antigravity-compatible',
     'openai',       // Uses requestUrl-backed REST transport
     'openai-codex', // Buffered requestUrl SSE transport; device-code login on mobile
     'anthropic',    // Uses requestUrl-backed REST transport
@@ -210,7 +212,7 @@ export const isProviderComingSoon = (providerId: string): boolean => {
  * Check if a provider is compatible with the current platform
  */
 export const isProviderCompatible = (providerId: string): boolean => {
-    if (providerId.startsWith('openai-compatible-')) return true;
+    if (providerId.startsWith('openai-compatible-') || providerId.startsWith('anthropic-compatible-') || providerId.startsWith('antigravity-compatible-')) return true;
     // Coming soon providers are not available anywhere
     if (isProviderComingSoon(providerId)) {
         return false;
