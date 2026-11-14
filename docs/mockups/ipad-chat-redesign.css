@@ -1,0 +1,1235 @@
+/* ==========================================================================
+   Obsidian Inherited + Nexus Token Block (Dark Default + Light Override)
+   ========================================================================== */
+:root {
+  --background-primary: #1c1d21;
+  --background-primary-alt: #17181c;
+  --background-secondary: #141518;
+  --background-secondary-alt: #101114;
+  --background-modifier-hover: rgba(255, 255, 255, 0.065);
+  --background-modifier-active: rgba(255, 255, 255, 0.1);
+  --background-modifier-active-hover: rgba(255, 255, 255, 0.12);
+  --background-modifier-border: rgba(255, 255, 255, 0.085);
+  --background-modifier-border-hover: rgba(255, 255, 255, 0.15);
+  --background-modifier-border-focus: #7a88ff;
+  --background-modifier-form-field: #191a1e;
+  --background-modifier-error: rgba(239, 107, 115, 0.16);
+  --background-modifier-error-border: rgba(239, 107, 115, 0.42);
+  --background-modifier-error-rgb: 239, 107, 115;
+
+  --interactive-normal: #2a2c33;
+  --interactive-hover: #333640;
+  --interactive-accent: #6e7bf2;
+  --interactive-accent-hover: #828ef7;
+  --interactive-accent-rgb: 110, 123, 242;
+  --interactive-success: #3fb97e;
+
+  --text-normal: #eceef4;
+  --text-muted: #9ca2b2;
+  --text-faint: #676d7d;
+  --text-accent: #909cff;
+  --text-accent-hover: #acb5ff;
+  --text-on-accent: #ffffff;
+  --text-success: #4ac98b;
+  --text-warning: #e5a94c;
+  --text-error: #f07178;
+  --text-error-rgb: 240, 113, 120;
+
+  --color-blue: #58a6ff;
+  --color-blue-rgb: 88, 166, 255;
+  --color-cyan: #4cc9f0;
+  --color-green: #4ac98b;
+  --color-green-rgb: 74, 201, 139;
+  --color-orange: #e5a94c;
+  --color-orange-rgb: 229, 169, 76;
+  --color-purple: #a78bfa;
+  --color-red: #f07178;
+  --color-red-rgb: 240, 113, 120;
+  --color-yellow: #ecc94b;
+  --color-yellow-rgb: 236, 201, 75;
+
+  --font-interface: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Inter", system-ui, sans-serif;
+  --font-monospace: "SF Mono", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-normal: 15px;
+  --font-medium: 14px;
+  --font-small: 13px;
+  --font-smaller: 11.5px;
+  --font-semibold: 600;
+  --font-ui-medium: 14px;
+  --font-ui-small: 12.5px;
+  --font-ui-smaller: 11px;
+
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 16px;
+  --size-4-2: 8px;
+  --shadow-l: 0 20px 52px rgba(0, 0, 0, 0.48);
+
+  --setting-group-heading-size: 12px;
+  --setting-items-background: #1c1d21;
+  --setting-items-divider-color: rgba(255, 255, 255, 0.07);
+  --setting-items-padding-x: 12px;
+  --setting-items-radius: 10px;
+  --chat-input-height: 44px;
+  --tool-status-marquee-duration: 12s;
+
+  /* Nexus-defined tokens */
+  --glass-backdrop: none;
+  --glass-fill: color-mix(in srgb, var(--background-primary) 82%, transparent);
+  --glass-fill-strong: color-mix(in srgb, var(--background-primary) 94%, transparent);
+  --glass-highlight: color-mix(in srgb, var(--text-normal) 10%, transparent);
+  --glass-rim: color-mix(in srgb, var(--text-normal) 5%, transparent);
+  --glass-shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
+  --glass-stroke: color-mix(in srgb, var(--text-normal) 10%, transparent);
+  --icon-size: 16px;
+  --setting-group-max-width: none;
+  --space-xxs: 2px;
+  --space-xs: 4px;
+  --space-s: 8px;
+  --space-m: 12px;
+  --space-l: 16px;
+  --space-xl: 24px;
+  --space-xxl: 32px;
+
+  /* Redesign semantic tokens */
+  --chat-user-bubble-bg: color-mix(in srgb, var(--interactive-accent) 16%, var(--background-primary));
+  --chat-user-bubble-border: color-mix(in srgb, var(--interactive-accent) 30%, transparent);
+  --mock-topo-surface: rgba(255, 255, 255, 0.015);
+  --chat-composer-shadow: 0 6px 22px rgba(0, 0, 0, 0.24);
+  --chat-popover-shadow: 0 14px 38px rgba(0, 0, 0, 0.44);
+  --mock-canvas-bg: #0b0c0e;
+  --mock-note-bg: #050507;
+  --mock-drawer-shell-bg: #18191d;
+  --mock-drawer-pill-bg: #26282e;
+  --mock-drawer-border: rgba(255, 255, 255, 0.09);
+  --mock-danger-tint: rgba(240, 113, 120, 0.18);
+}
+
+body.theme-light,
+.mock-light-scope {
+  --background-primary: #ffffff;
+  --background-primary-alt: #f5f6f8;
+  --background-secondary: #f2f3f6;
+  --background-secondary-alt: #e9ebf0;
+  --background-modifier-hover: rgba(15, 23, 42, 0.055);
+  --background-modifier-active: rgba(15, 23, 42, 0.09);
+  --background-modifier-active-hover: rgba(15, 23, 42, 0.11);
+  --background-modifier-border: rgba(15, 23, 42, 0.1);
+  --background-modifier-border-hover: rgba(15, 23, 42, 0.18);
+  --background-modifier-border-focus: #5865f2;
+  --background-modifier-form-field: #ffffff;
+
+  --interactive-normal: #e6e8ee;
+  --interactive-hover: #dcdfe7;
+  --interactive-accent: #5865f2;
+  --interactive-accent-hover: #4752c4;
+  --interactive-accent-rgb: 88, 101, 242;
+
+  --text-normal: #1b1e26;
+  --text-muted: #5c6375;
+  --text-faint: #8b92a5;
+  --text-accent: #4c58e0;
+  --text-accent-hover: #3b46c4;
+  --text-on-accent: #ffffff;
+  --text-success: #1f9d63;
+  --text-warning: #c67d15;
+  --text-error: #d64550;
+
+  --setting-items-background: #ffffff;
+  --setting-items-divider-color: rgba(15, 23, 42, 0.08);
+
+  --glass-fill: color-mix(in srgb, var(--background-primary) 86%, transparent);
+  --glass-fill-strong: color-mix(in srgb, var(--background-primary) 96%, transparent);
+  --glass-highlight: color-mix(in srgb, var(--text-normal) 7%, transparent);
+  --glass-rim: color-mix(in srgb, var(--text-normal) 4%, transparent);
+  --glass-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
+  --glass-stroke: color-mix(in srgb, var(--text-normal) 10%, transparent);
+
+  --chat-user-bubble-bg: color-mix(in srgb, var(--interactive-accent) 11%, var(--background-primary));
+  --chat-user-bubble-border: color-mix(in srgb, var(--interactive-accent) 24%, transparent);
+  --chat-composer-shadow: 0 4px 16px rgba(15, 23, 42, 0.07);
+  --chat-popover-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+  --mock-drawer-shell-bg: #f2f3f6;
+  --mock-drawer-pill-bg: #e5e7ed;
+  --mock-drawer-border: rgba(15, 23, 42, 0.11);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--mock-canvas-bg);
+  color: var(--text-normal);
+  font-family: var(--font-interface);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ==========================================================================
+   Hostile Real Obsidian iPadOS app.css Simulation!
+   Proves our .clickable-icon discipline never regresses to grey boxes / 2px dots
+   ========================================================================== */
+.is-mobile button:not(.clickable-icon) {
+  background-color: var(--interactive-normal);
+  color: var(--text-normal);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  font-family: inherit;
+}
+
+.is-tablet button:not(.clickable-icon) {
+  padding: 4px 20px;
+}
+
+/* Obsidian's native .clickable-icon baseline */
+.clickable-icon {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  margin: 0;
+  color: var(--text-muted);
+  border-radius: var(--radius-s);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.clickable-icon:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.clickable-icon svg {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  flex-shrink: 0;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.85;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ==========================================================================
+   Mockup Harness Chrome (mock-* only, not ported to src/)
+   ========================================================================== */
+.mock-control-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  background-color: var(--background-secondary-alt);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.mock-control-bar[data-hidden="true"] {
+  display: none;
+}
+
+.mock-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.mock-brand strong {
+  color: var(--text-normal);
+  font-weight: 600;
+}
+
+.mock-Controls {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mock-switch-btn {
+  appearance: none;
+  border: 1px solid var(--background-modifier-border);
+  background-color: var(--background-primary);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.mock-switch-btn.is-active {
+  background-color: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-weight: 500;
+}
+
+/* ==========================================================================
+   View 1: Exact 1568x1081 iPad Landscape Scene Recreation
+   ========================================================================== */
+.mock-ipad-viewport {
+  width: 1568px;
+  height: 1081px;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--mock-note-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.mock-ios-statusbar {
+  height: 30px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-normal);
+  letter-spacing: 0.01em;
+  flex-shrink: 0;
+}
+
+.mock-ios-statusbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.mock-vpn-pill {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background-color: var(--text-normal);
+  color: var(--mock-note-bg);
+  font-weight: 700;
+}
+
+.mock-obsidian-workspace {
+  flex: 1;
+  position: relative;
+  display: flex;
+  min-height: 0;
+}
+
+/* Background Vault Note (Left side of iPad) */
+.mock-editor-pane {
+  flex: 1;
+  padding: 8px 42px 32px 26px;
+  padding-right: 430px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mock-tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  margin-bottom: 8px;
+}
+
+.mock-sidebar-toggle-icon {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.mock-active-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 24px;
+  padding: 7px 16px;
+  border-radius: 10px;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  font-size: 13.5px;
+  color: var(--text-normal);
+}
+
+.mock-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 13.5px;
+  color: var(--text-muted);
+  padding: 6px 8px 20px;
+}
+
+.mock-note-prose {
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+  color: var(--text-normal);
+}
+
+.mock-note-lead {
+  font-size: 16.5px;
+  line-height: 1.75;
+  color: var(--text-muted);
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin: 0 0 32px;
+}
+
+.mock-note-h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 22px;
+  letter-spacing: -0.01em;
+}
+
+.mock-topology-box {
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  padding: 18px 24px 28px;
+  background-color: var(--mock-topo-surface);
+  max-width: 520px;
+}
+
+.mock-topology-caption {
+  font-size: 14.5px;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+}
+
+.mock-topo-node {
+  border: 1px solid var(--background-modifier-border-hover);
+  background-color: var(--background-primary);
+  border-radius: 6px;
+  padding: 14px 18px;
+  text-align: center;
+  font-size: 14.5px;
+  line-height: 1.5;
+  width: 280px;
+  margin: 0 auto;
+}
+
+.mock-topo-arrow {
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 18px;
+  line-height: 1.2;
+  padding: 6px 0;
+}
+
+/* Obsidian 1.11+ Right Floating Sheet (.workspace-drawer.mod-right) */
+.mock-floating-drawer {
+  position: absolute;
+  top: 6px;
+  right: 16px;
+  bottom: 14px;
+  width: 392px;
+  border-radius: 26px;
+  background-color: var(--mock-drawer-shell-bg);
+  border: 1px solid var(--mock-drawer-border);
+  box-shadow: var(--shadow-l);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mock-drawer-top-chrome {
+  padding: 12px 14px 8px;
+  flex-shrink: 0;
+}
+
+.mock-drawer-selector-pill {
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 21px;
+  background-color: var(--mock-drawer-pill-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.mock-drawer-selector-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mock-drawer-selector-left svg,
+.mock-drawer-selector-pill > svg {
+  width: 17px;
+  height: 17px;
+  stroke: var(--text-muted);
+  fill: none;
+  stroke-width: 1.9;
+}
+
+.mock-drawer-bottom-chrome {
+  padding: 8px 16px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+.mock-drawer-doc-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.mock-drawer-doc-sub {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+.mock-drawer-bottom-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mock-drawer-circle-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 19px;
+  background-color: var(--mock-drawer-pill-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.mock-drawer-circle-btn.is-accent {
+  color: var(--text-error);
+  background-color: var(--mock-danger-tint);
+}
+
+.mock-drawer-circle-btn svg {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.9;
+}
+
+/* ==========================================================================
+   PROPOSED PRODUCTION REDESIGN: .chat-view-container (Container-Query Driven)
+   ========================================================================== */
+.chat-view-container {
+  container-type: inline-size;
+  container-name: nexus-chat;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: transparent;
+  color: var(--text-normal);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 1. Ultra-Slim Seamless Utility Bar (replaces heavy boxed .chat-header) */
+.chat-topbar {
+  height: 38px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.chat-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.chat-thread-switcher.clickable-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+  min-width: 0;
+  max-width: 100%;
+  color: var(--text-normal);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chat-thread-switcher-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.chat-thread-chevron {
+  width: 13px;
+  height: 13px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.chat-rename-button.clickable-icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  color: var(--text-faint);
+}
+
+.chat-rename-button.clickable-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.chat-rename-button.clickable-icon.is-hidden {
+  display: none;
+}
+
+.chat-rename-button.clickable-icon.is-showcase {
+  color: var(--text-accent);
+  background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+}
+
+.chat-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.chat-topbar-actions .clickable-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+/* 2. Message Stream (Editorial Full-Width Column + User Capsule) */
+.message-display-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.message-user-row {
+  display: flex;
+  justify-content: flex-end;
+  padding-left: 28px;
+}
+
+.message-user-capsule {
+  background-color: var(--chat-user-bubble-bg);
+  border: 1px solid var(--chat-user-bubble-border);
+  color: var(--text-normal);
+  padding: 9px 13px;
+  border-radius: 15px 15px 4px 15px;
+  font-size: 14px;
+  line-height: 1.52;
+  word-break: break-word;
+}
+
+.message-assistant-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* SIGNATURE ELEMENT: Inline Trace Spine (Thinking + Tools along 1.5px rail) */
+.nexus-trace-spine {
+  position: relative;
+  padding-left: 15px;
+  margin-left: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nexus-trace-spine::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 7px;
+  bottom: 7px;
+  width: 1.5px;
+  background-color: var(--background-modifier-border-hover);
+  border-radius: 2px;
+}
+
+.nexus-trace-step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 24px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.nexus-trace-dot {
+  position: absolute;
+  left: -14.5px;
+  width: 6.5px;
+  height: 6.5px;
+  border-radius: 50%;
+  background-color: var(--mock-drawer-shell-bg);
+  border: 1.5px solid var(--text-faint);
+}
+
+.nexus-trace-step.is-thinking .nexus-trace-dot {
+  border-color: var(--interactive-accent);
+  background-color: var(--interactive-accent);
+}
+
+.nexus-trace-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background-color: var(--background-modifier-hover);
+  color: var(--text-accent);
+}
+
+.nexus-trace-reasoning-body {
+  margin: 2px 0 4px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background-color: var(--background-modifier-hover);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+/* Assistant Editorial Prose (Unboxed -> Maximum Reading Width in 368px Drawer!) */
+.message-assistant-prose {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-normal);
+  padding: 0 2px;
+}
+
+.message-assistant-prose p {
+  margin: 0 0 9px;
+}
+
+.message-assistant-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.message-assistant-prose ul {
+  margin: 6px 0 10px;
+  padding-left: 18px;
+}
+
+.message-assistant-prose li {
+  margin-bottom: 6px;
+}
+
+.message-assistant-prose code {
+  font-family: var(--font-monospace);
+  font-size: 12.2px;
+  padding: 1.5px 5px;
+  border-radius: 4px;
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.nexus-wikilink {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--interactive-accent) 13%, transparent);
+  color: var(--text-accent);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Quiet Touch-Safe Message Action Row (Never hidden behind desktop :hover!) */
+.message-turn-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 2px;
+}
+
+.message-turn-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.message-turn-actions .clickable-icon {
+  height: 28px;
+  min-width: 28px;
+  padding: 0 6px;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.message-turn-actions .clickable-icon svg {
+  width: 13.5px;
+  height: 13.5px;
+}
+
+.message-branch-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+/* 3. Zero-Friction Empty State (Direct Type + Tactile Starter Chips) */
+.chat-ready-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 18px 14px 12px;
+}
+
+.chat-ready-hero {
+  margin-top: 18px;
+}
+
+.chat-ready-context-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.chat-ready-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--text-success);
+}
+
+.chat-ready-title {
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  margin: 0 0 6px;
+  color: var(--text-normal);
+}
+
+.chat-ready-subtitle {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin: 0 0 18px;
+}
+
+.chat-starter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.chat-starter-chip.clickable-icon {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  font-size: 13px;
+  text-align: left;
+}
+
+.chat-starter-kbd {
+  font-family: var(--font-monospace);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background-color: var(--background-modifier-hover);
+  color: var(--text-accent);
+  min-width: 26px;
+  text-align: center;
+}
+
+.chat-recent-section {
+  border-top: 1px solid var(--background-modifier-border);
+  padding-top: 10px;
+}
+
+.chat-recent-heading {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  margin-bottom: 6px;
+}
+
+.chat-recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.chat-recent-time {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+/* 4. Unified Composer Dock (Replaces scattered 3-layer bottom stack!) */
+.chat-composer-shell {
+  padding: 4px 10px 10px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.chat-composer-card {
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border-hover);
+  border-radius: 16px;
+  box-shadow: var(--chat-composer-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Context / Active Tool Micro-Tray (collapses cleanly when empty) */
+.chat-composer-tray {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px 2px;
+  flex-wrap: wrap;
+}
+
+.chat-context-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background-color: var(--background-modifier-hover);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  max-width: 210px;
+}
+
+.chat-context-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-context-chip svg {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+/* Textarea: 16px on mobile prevents iOS WKWebView zoom; attribute placeholder works in all states */
+.chat-textarea {
+  min-height: 40px;
+  max-height: 140px;
+  padding: 8px 12px 6px;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--text-normal);
+  outline: none;
+  position: relative;
+}
+
+.chat-textarea[data-empty="true"]::before {
+  content: attr(data-placeholder);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+/* Integrated Composer Footer: Explicit Left & Right <div> Clusters */
+.chat-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 4px 7px 7px 7px;
+}
+
+.chat-composer-tools,
+.chat-composer-meta {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.chat-composer-icon-btn.clickable-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.chat-model-pill.clickable-icon {
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 8px;
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+  font-size: 12px;
+  font-weight: 500;
+  gap: 5px;
+  max-width: 214px;
+}
+
+.chat-model-pill-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-effort-tag {
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--text-accent);
+  padding: 0.5px 4.5px;
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  flex-shrink: 0;
+}
+
+.chat-agent-live-pill.clickable-icon {
+  height: 28px;
+  padding: 0 7px;
+  border-radius: 8px;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.chat-context-pill.clickable-icon {
+  height: 28px;
+  padding: 0 7px;
+  border-radius: 8px;
+  gap: 5px;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.chat-context-ring {
+  width: 13px;
+  height: 13px;
+}
+
+.chat-send-btn.clickable-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 15px;
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.chat-send-btn.clickable-icon:hover {
+  background-color: var(--interactive-accent-hover);
+  color: var(--text-on-accent);
+}
+
+.chat-send-btn.clickable-icon svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.25;
+}
+
+/* 5. Anchored Popover Sheet (Model + Probed Thinking Effort Tiers) */
+.chat-model-popover {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 116px;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border-hover);
+  border-radius: 14px;
+  box-shadow: var(--chat-popover-shadow);
+  padding: 10px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.chat-popover-section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  padding: 0 4px;
+}
+
+.chat-model-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 8px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: var(--text-normal);
+}
+
+.chat-model-option.is-selected {
+  background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+}
+
+.chat-model-option-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.chat-effort-segmented {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px;
+  padding: 3px;
+  border-radius: 9px;
+  background-color: var(--background-secondary);
+}
+
+.chat-effort-seg-btn.clickable-icon {
+  height: 27px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.chat-effort-seg-btn.clickable-icon.is-active {
+  background-color: var(--background-primary);
+  color: var(--text-accent);
+  font-weight: 650;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* ==========================================================================
+   View 2: 3-Column States Grid (Ready / Model+Thinking Sheet / Auto-Title+Rename & Light)
+   ========================================================================== */
+.mock-states-stage {
+  padding: 20px 28px 24px;
+  display: none;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 1568px;
+  margin: 0 auto;
+}
+
+body[data-view="states"] .mock-ipad-viewport {
+  display: none;
+}
+
+body[data-view="states"] .mock-states-stage {
+  display: flex;
+}
+
+.mock-states-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 384px);
+  justify-content: center;
+  gap: 28px;
+}
+
+.mock-sheet-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mock-col-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 6px;
+}
+
+.mock-col-title {
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--text-normal);
+}
+
+.mock-col-tag {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.mock-standalone-drawer {
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  width: 384px;
+  height: 836px;
+  padding-bottom: 4px;
+}
+
+/* Inline `[[` Suggester Clamped Inside Drawer Width & Above Composer */
+.chat-inline-suggester {
+  margin: 0 10px 4px;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border-hover);
+  border-radius: 11px;
+  box-shadow: var(--chat-popover-shadow);
+  padding: 5px;
+}
+
+.chat-suggest-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: var(--text-normal);
+}
+
+.chat-suggest-item.is-active {
+  background-color: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+  color: var(--text-accent);
+}

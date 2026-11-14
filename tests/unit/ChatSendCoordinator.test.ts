@@ -598,3 +598,101 @@ describe('ChatSendCoordinator text-only provider runtime guard', () => {
     expect(harness.messageManager.sendMessage).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('ChatSendCoordinator auto-create and auto-title', () => {
+  beforeEach(() => {
+    mockNotices.length = 0;
+    jest.clearAllMocks();
+  });
+
+  it('auto-creates a conversation titled from the first message when sending from empty state', async () => {
+    const harness = createHarness();
+    let current: ConversationData | null = null;
+    const createdConversation = createConversation([]);
+    createdConversation.title = 'Summarize my vault';
+
+    const carrySelectionsIntoNextConversation = jest.fn();
+    (harness.modelAgentManager as Record<string, unknown>).carrySelectionsIntoNextConversation =
+      carrySelectionsIntoNextConversation;
+
+    harness.conversationManager.getCurrentConversation.mockImplementation(() => current);
+    const createNewConversation = jest.fn().mockImplementation(async (title?: string) => {
+      createdConversation.title = title ?? 'New chat';
+      current = createdConversation;
+    });
+    const autoTitleConversationFromFirstMessage = jest.fn().mockResolvedValue(undefined);
+    Object.assign(harness.conversationManager, {
+      createNewConversation,
+      autoTitleConversationFromFirstMessage,
+    });
+
+    const sent = await harness.coordinator.handleSendMessage('  #  Summarize\nmy vault  ');
+
+    expect(sent).toBe(true);
+    expect(carrySelectionsIntoNextConversation).toHaveBeenCalledTimes(1);
+    expect(createNewConversation).toHaveBeenCalledWith('Summarize my vault');
+    expect(autoTitleConversationFromFirstMessage).not.toHaveBeenCalled();
+    expect(harness.messageManager.sendMessage).toHaveBeenCalledWith(
+      createdConversation,
+      '  #  Summarize\nmy vault  ',
+      expect.any(Object),
+      undefined
+    );
+  });
+
+  it('returns false when no conversation exists and createNewConversation is unavailable', async () => {
+    const harness = createHarness();
+    harness.conversationManager.getCurrentConversation.mockReturnValue(null);
+
+    const sent = await harness.coordinator.handleSendMessage('Hello');
+
+    expect(sent).toBe(false);
+    expect(harness.messageManager.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('returns false when auto-creation does not produce a current conversation', async () => {
+    const harness = createHarness();
+    harness.conversationManager.getCurrentConversation.mockReturnValue(null);
+    const createNewConversation = jest.fn().mockResolvedValue(undefined);
+    Object.assign(harness.conversationManager, { createNewConversation });
+
+    const sent = await harness.coordinator.handleSendMessage('Hello');
+
+    expect(sent).toBe(false);
+    expect(createNewConversation).toHaveBeenCalledWith('Hello');
+    expect(harness.messageManager.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('auto-titles an existing empty conversation before sending its first message', async () => {
+    const harness = createHarness();
+    harness.conversation.messages = [];
+    harness.conversation.title = 'New chat';
+    const autoTitleConversationFromFirstMessage = jest.fn().mockImplementation(async () => {
+      harness.conversation.title = 'First question';
+    });
+    Object.assign(harness.conversationManager, {
+      createNewConversation: jest.fn(),
+      autoTitleConversationFromFirstMessage,
+    });
+
+    const sent = await harness.coordinator.handleSendMessage('First question');
+
+    expect(sent).toBe(true);
+    expect(autoTitleConversationFromFirstMessage).toHaveBeenCalledWith('conv-1', 'First question');
+    expect(harness.messageManager.sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not auto-title a conversation that already has messages', async () => {
+    const harness = createHarness();
+    const autoTitleConversationFromFirstMessage = jest.fn().mockResolvedValue(undefined);
+    Object.assign(harness.conversationManager, {
+      createNewConversation: jest.fn(),
+      autoTitleConversationFromFirstMessage,
+    });
+
+    const sent = await harness.coordinator.handleSendMessage('Follow-up');
+
+    expect(sent).toBe(true);
+    expect(autoTitleConversationFromFirstMessage).not.toHaveBeenCalled();
+  });
+});

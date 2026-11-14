@@ -5,7 +5,13 @@
  * and error handling in the chat sidebar conversation manager.
  */
 
-import { ConversationManager, ConversationManagerEvents } from '../../src/ui/chat/services/ConversationManager';
+import {
+  ConversationManager,
+  ConversationManagerEvents,
+  DEFAULT_NEW_CONVERSATION_TITLE,
+  deriveConversationTitleFromMessage,
+} from '../../src/ui/chat/services/ConversationManager';
+import { ConversationTitleModal } from '../../src/ui/chat/components/ConversationTitleModal';
 import { ConversationData } from '../../src/types/chat/ChatTypes';
 import type { PaginatedResult } from '../../src/types/pagination/PaginationTypes';
 import { App } from 'obsidian';
@@ -618,6 +624,20 @@ describe('ConversationManager — Pagination & Search', () => {
       expect(manager.getCurrentConversation()?.title).toBe(items[0].title);
     });
 
+    it('should ignore empty or whitespace-only titles', async () => {
+      await manager.renameConversation('c1', '   ');
+      expect(mockService.updateConversationTitle).not.toHaveBeenCalled();
+    });
+
+    it('should trim whitespace from the new title', async () => {
+      const items = createConversationBatch(1);
+      mockService.listConversations.mockResolvedValue(createPaginatedResult(items, false, 0, 20, 1));
+      await manager.loadConversations();
+
+      await manager.renameConversation(items[0].id, '  Trimmed Title  ');
+      expect(mockService.updateConversationTitle).toHaveBeenCalledWith(items[0].id, 'Trimmed Title');
+    });
+
     it('should call onError when rename fails', async () => {
       mockService.updateConversationTitle.mockResolvedValue(false);
       await manager.renameConversation('c1', 'New Title');
@@ -632,10 +652,49 @@ describe('ConversationManager — Pagination & Search', () => {
   });
 
   // ========================================================================
+  // Title derivation & auto-titling
+  // ========================================================================
+
+  describe('deriveConversationTitleFromMessage', () => {
+    it('should collapse whitespace and strip leading markdown markers', () => {
+      expect(deriveConversationTitleFromMessage('  #  Plan\n\nnext steps  ')).toBe('Plan next steps');
+      expect(deriveConversationTitleFromMessage('> ```ts\nconst x = 1;')).toBe('ts const x = 1;');
+    });
+
+    it('should fall back to default title when empty or punctuation-only', () => {
+      expect(deriveConversationTitleFromMessage('   \n\t  ')).toBe(DEFAULT_NEW_CONVERSATION_TITLE);
+      expect(deriveConversationTitleFromMessage('### > `  ')).toBe(DEFAULT_NEW_CONVERSATION_TITLE);
+    });
+
+    it('should truncate messages longer than 50 characters with ellipsis', () => {
+      const derived = deriveConversationTitleFromMessage('A'.repeat(60));
+      expect(derived).toHaveLength(50);
+      expect(derived).toBe('A'.repeat(47) + '...');
+    });
+  });
+
+  // ========================================================================
   // Create new conversation
   // ========================================================================
 
   describe('createNewConversation', () => {
+    it('should create conversation with default title and without opening a modal when title is omitted', async () => {
+      const newConv = createConversationData({ id: 'new_conv', title: DEFAULT_NEW_CONVERSATION_TITLE, messages: [] });
+      mockService.createConversation.mockResolvedValue({ success: true, conversationId: 'new_conv' });
+      mockService.getConversation.mockResolvedValue(newConv);
+      const openSpy = jest.spyOn(ConversationTitleModal.prototype, 'open');
+
+      try {
+        await manager.createNewConversation();
+
+        expect(openSpy).not.toHaveBeenCalled();
+        expect(mockService.createConversation).toHaveBeenCalledWith(DEFAULT_NEW_CONVERSATION_TITLE);
+        expect(mockService.getConversation).toHaveBeenCalledWith('new_conv');
+      } finally {
+        openSpy.mockRestore();
+      }
+    });
+
     it('should create conversation with provided title', async () => {
       const newConv = createConversationData({ id: 'new_conv', title: 'My Chat' });
       mockService.createConversation.mockResolvedValue({ success: true, conversationId: 'new_conv' });
@@ -661,6 +720,134 @@ describe('ConversationManager — Pagination & Search', () => {
       await manager.createNewConversation('Title');
 
       expect(events.onError).toHaveBeenCalledWith('Failed to create conversation');
+    });
+  });
+
+  // ========================================================================
+  // Auto-title on first message & rename prompt
+  // ========================================================================
+
+  describe('autoTitleConversationFromFirstMessage', () => {
+    it('should rename an auto-titled conversation on its first message and ignore subsequent calls', async () => {
+      const newConv = createConversationData({ id: 'new_conv', title: DEFAULT_NEW_CONVERSATION_TITLE, messages: [] });
+      mockService.createConversation.mockResolvedValue({ success: true, conversationId: 'new_conv' });
+      mockService.getConversation.mockResolvedValue(newConv);
+
+      await manager.createNewConversation();
+      await manager.autoTitleConversationFromFirstMessage('new_conv', '# Summarize my research notes');
+
+      expect(mockService.updateConversationTitle).toHaveBeenCalledTimes(1);
+      expect(mockService.updateConversationTitle).toHaveBeenCalledWith('new_conv', 'Summarize my research notes');
+      expect(manager.getCurrentConversation()?.title).toBe('Summarize my research notes');
+
+      await manager.autoTitleConversationFromFirstMessage('new_conv', 'Second message should not rename');
+      expect(mockService.updateConversationTitle).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not overwrite a manually renamed conversation before its first message', async () => {
+      const newConv = createConversationData({ id: 'new_conv', title: DEFAULT_NEW_CONVERSATION_TITLE, messages: [] });
+      mockService.createConversation.mockResolvedValue({ success: true, conversationId: 'new_conv' });
+      mockService.getConversation.mockResolvedValue(newConv);
+
+      await manager.createNewConversation();
+      await manager.renameConversation('new_conv', 'Custom Title');
+      mockService.updateConversationTitle.mockClear();
+
+      await manager.autoTitleConversationFromFirstMessage('new_conv', 'First message');
+
+      expect(mockService.updateConversationTitle).not.toHaveBeenCalled();
+      expect(manager.getCurrentConversation()?.title).toBe('Custom Title');
+    });
+
+    it('should auto-title a pre-existing empty default-titled conversation', async () => {
+      const existingEmpty = createConversationData({
+        id: 'empty_conv',
+        title: DEFAULT_NEW_CONVERSATION_TITLE,
+        messages: [],
+      });
+      manager.setCurrentConversation(existingEmpty);
+
+      await manager.autoTitleConversationFromFirstMessage('empty_conv', 'Explain POMDP');
+
+      expect(mockService.updateConversationTitle).toHaveBeenCalledWith('empty_conv', 'Explain POMDP');
+    });
+  });
+
+  describe('promptRenameConversation', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should open ConversationTitleModal in rename mode and update the conversation title', async () => {
+      jest.useFakeTimers();
+      const items = createConversationBatch(2);
+      mockService.listConversations.mockResolvedValue(createPaginatedResult(items, false, 0, 20, 2));
+      await manager.loadConversations();
+      manager.setCurrentConversation(items[0]);
+
+      const openSpy = jest.spyOn(ConversationTitleModal.prototype, 'open').mockImplementation(function (this: unknown) {
+        const modal = this as {
+          onOpen: () => void;
+          close: () => void;
+          result: string | null;
+          submitted: boolean;
+          options?: { initialTitle?: string; mode?: 'create' | 'rename' };
+        };
+        expect(modal.options).toEqual({ initialTitle: items[0].title, mode: 'rename' });
+        modal.onOpen();
+        modal.result = 'Renamed Title';
+        modal.submitted = true;
+        modal.close();
+      });
+
+      try {
+        await manager.promptRenameConversation();
+        jest.advanceTimersByTime(0);
+
+        expect(openSpy).toHaveBeenCalledTimes(1);
+        expect(mockService.updateConversationTitle).toHaveBeenCalledWith(items[0].id, 'Renamed Title');
+      } finally {
+        openSpy.mockRestore();
+      }
+    });
+
+    it('should find a specific conversation by ID when passed to promptRenameConversation', async () => {
+      jest.useFakeTimers();
+      const items = createConversationBatch(2);
+      mockService.listConversations.mockResolvedValue(createPaginatedResult(items, false, 0, 20, 2));
+      await manager.loadConversations();
+
+      const openSpy = jest.spyOn(ConversationTitleModal.prototype, 'open').mockImplementation(function (this: unknown) {
+        const modal = this as {
+          onOpen: () => void;
+          close: () => void;
+          result: string | null;
+          submitted: boolean;
+        };
+        modal.onOpen();
+        modal.result = 'Second Renamed';
+        modal.submitted = true;
+        modal.close();
+      });
+
+      try {
+        await manager.promptRenameConversation(items[1].id);
+        jest.advanceTimersByTime(0);
+
+        expect(mockService.updateConversationTitle).toHaveBeenCalledWith(items[1].id, 'Second Renamed');
+      } finally {
+        openSpy.mockRestore();
+      }
+    });
+
+    it('should be a no-op when no target conversation exists', async () => {
+      const openSpy = jest.spyOn(ConversationTitleModal.prototype, 'open');
+      try {
+        await manager.promptRenameConversation();
+        expect(openSpy).not.toHaveBeenCalled();
+      } finally {
+        openSpy.mockRestore();
+      }
     });
   });
 

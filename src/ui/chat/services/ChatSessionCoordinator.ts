@@ -20,7 +20,7 @@ interface ConversationManagerLike {
   getConversations(): ConversationData[];
   getCurrentConversation(): ConversationData | null;
   selectConversation(conversation: ConversationData): Promise<void>;
-  createNewConversation(): Promise<void>;
+  createNewConversation(title?: string): Promise<void>;
   isSearchActive: boolean;
   hasMore: boolean;
   isLoading: boolean;
@@ -233,6 +233,11 @@ export class ChatSessionCoordinator {
 
     if (!currentConversation && conversations.length > 0) {
       await conversationManager.selectConversation(conversations[0]);
+      return;
+    }
+
+    if (currentConversation) {
+      this.deps.onUpdateChatTitle();
     }
   }
 
@@ -247,13 +252,14 @@ export class ChatSessionCoordinator {
 
     const hasProviders = this.deps.getChatService()?.hasConfiguredProviders() ?? false;
     uiStateController.showWelcomeState(hasProviders);
+    this.deps.onUpdateChatTitle();
 
     const chatTitle = this.deps.getChatTitleEl();
     if (chatTitle) {
-      chatTitle.textContent = 'Chat';
+      chatTitle.textContent = 'New conversation';
     }
 
-    this.deps.getChatInput()?.setConversationState(false);
+    this.deps.getChatInput()?.setConversationState(hasProviders);
 
     if (hasProviders) {
       this.bindWelcomeButton();

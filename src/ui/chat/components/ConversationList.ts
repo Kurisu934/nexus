@@ -11,6 +11,7 @@ export class ConversationList {
   private conversations: ConversationData[] = [];
   private activeConversationId: string | null = null;
   private pendingDeleteConversationId: string | null = null;
+  private pendingDeleteButton: HTMLButtonElement | null = null;
   private pendingDeleteTimer: number | null = null;
   private _hasMore = false;
   private _isLoading = false;
@@ -80,6 +81,7 @@ export class ConversationList {
 
     this.container.empty();
     this.loadMoreBtn = null; // container.empty() destroys child nodes
+    this.pendingDeleteButton = null;
     this.container.addClass('conversation-list');
 
     if (this.conversations.length === 0) {
@@ -144,10 +146,16 @@ export class ConversationList {
         cls: 'conversation-action-btn conversation-delete-btn clickable-icon'
       });
       setIcon(deleteBtn, 'trash-2');
-      deleteBtn.setAttribute('aria-label', 'Delete conversation');
+      if (this.pendingDeleteConversationId === conversation.id) {
+        deleteBtn.addClass('is-confirming-delete');
+        deleteBtn.setAttribute('aria-label', 'Tap again to delete');
+        this.pendingDeleteButton = deleteBtn;
+      } else {
+        deleteBtn.setAttribute('aria-label', 'Delete conversation');
+      }
       const deleteHandler = (e: MouseEvent) => {
         e.stopPropagation();
-        this.requestDeleteConversation(conversation);
+        this.requestDeleteConversation(conversation, deleteBtn);
       };
       this.component?.registerDomEvent(deleteBtn, 'click', deleteHandler);
     });
@@ -188,9 +196,11 @@ export class ConversationList {
       actions.addClass('conversation-actions-hidden');
     }
 
+    let finished = false;
     const finishRename = (save: boolean) => {
+      if (finished) return;
+      finished = true;
       const newTitle = input.value.trim();
-
       // Restore title element
       const newTitleEl = createDiv({
         cls: 'conversation-title',
@@ -214,7 +224,7 @@ export class ConversationList {
 
     // Handle keyboard events
     const keydownHandler = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && !e.isComposing) {
         e.preventDefault();
         input.blur(); // Trigger blur handler to save
       } else if (e.key === 'Escape') {
@@ -263,23 +273,32 @@ export class ConversationList {
     return date.toLocaleDateString();
   }
 
-  private requestDeleteConversation(conversation: ConversationData): void {
+  private requestDeleteConversation(
+    conversation: ConversationData,
+    deleteBtn: HTMLButtonElement
+  ): void {
     if (this.pendingDeleteConversationId === conversation.id) {
       this.clearPendingDeleteConversation();
       this.onConversationDelete(conversation.id);
       return;
     }
 
+    this.clearPendingDeleteConversation();
     this.pendingDeleteConversationId = conversation.id;
-    if (this.pendingDeleteTimer !== null) {
-      window.clearTimeout(this.pendingDeleteTimer);
-    }
+    this.pendingDeleteButton = deleteBtn;
+    deleteBtn.addClass('is-confirming-delete');
+    deleteBtn.setAttribute('aria-label', 'Tap again to delete');
     this.pendingDeleteTimer = window.setTimeout(() => {
       this.clearPendingDeleteConversation();
     }, 5000);
   }
 
   private clearPendingDeleteConversation(): void {
+    if (this.pendingDeleteButton) {
+      this.pendingDeleteButton.removeClass('is-confirming-delete');
+      this.pendingDeleteButton.setAttribute('aria-label', 'Delete conversation');
+      this.pendingDeleteButton = null;
+    }
     this.pendingDeleteConversationId = null;
     if (this.pendingDeleteTimer !== null) {
       window.clearTimeout(this.pendingDeleteTimer);

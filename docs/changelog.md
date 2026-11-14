@@ -2,6 +2,14 @@
 
 ## November 2026
 
+**v5.25.0** — Native editorial chat UI redesign, iPadOS/iOS adaptation, and automatic conversation naming
+
+- Redesign the chat panel to blend natively with Obsidian's dark and light surfaces (`--glass-backdrop` neon glow removed, slim borderless thread switcher bar, unboxed full-width assistant prose, inline reasoning/tool trace spine, and a single unified composer dock with an inline **Model & Thinking effort** quick-picker popover).
+- Fix iPadOS and iOS rendering and input defects: add `.clickable-icon` and container queries (`@container nexus-chat`) across all header, status, and composer controls to prevent Obsidian tablet `<button>` rules from crushing icons or adding grey button boxes; remove soft-keyboard transcript hiding; guard `Enter` against IME composition (`isComposing`); render placeholders reliably via `data-empty`; and clamp `/`, `@`, `[[`, `#` suggesters within `visualViewport`.
+- Create conversations without a blocking title prompt: sending directly from the empty ready state automatically creates a conversation named after your first message, **New conversation** starts immediately as **New chat** and updates its title on the first turn unless renamed, and active conversations can be renamed anytime from the top bar or conversation list.
+
+---
+
 **v5.24.0** — Third-party OpenAI Responses endpoints and probe-driven thinking tiers across all compatible protocols
 
 - Connect third-party OpenAI Responses API servers and gateways (`/v1/responses` and `/codex/responses`) under **Settings -> Nexus -> Providers -> Responses-compatible**. Supports stateless full-input replay (`store: false`, default for multi-account gateways) and stateful `previous_response_id` continuations, `Bearer` / `x-api-key` / dual auth headers, automatic SSE collection fallback on stream-only Codex backends, reasoning summaries, and native function calling.

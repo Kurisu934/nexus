@@ -12,6 +12,7 @@ import { ItemView, Notice, Platform, WorkspaceLeaf } from 'obsidian';
 import { ConversationList } from './components/ConversationList';
 import { MessageDisplay } from './components/MessageDisplay';
 import { ChatInput } from './components/ChatInput';
+import { ChatModelPopover, resolveModelPillInfo } from './components/ChatModelPopover';
 import { ChatSettingsModal } from './components/ChatSettingsModal';
 import { ConfirmModal } from '../../settings/components/ConfirmModal';
 import { ChatService } from '../../services/chat/ChatService';
@@ -101,7 +102,7 @@ export class ChatView extends ItemView {
   private toolEventCoordinator!: ToolEventCoordinator;
   private toolStatusBar!: ToolStatusBar;
   private toolStatusBarController!: ToolStatusBarController;
-
+  private modelPopover: ChatModelPopover | null = null;
   // Subagent infrastructure (delegated to SubagentController)
   private subagentController: SubagentController | null = null;
 
@@ -652,7 +653,9 @@ export class ChatView extends ItemView {
     this.uiStateController.setOpenProviderSettingsCallback(() => {
       this.openProviderSettings();
     });
-    this.streamingController = new StreamingController(this.containerEl, this.app, this);
+    this.uiStateController.setStarterTriggerCallback((trigger) => {
+      this.chatInput?.insertTrigger(trigger);
+    });
     this.nexusLoadingController = new NexusLoadingController(this.containerEl);
   }
 
@@ -726,6 +729,7 @@ export class ChatView extends ItemView {
       },
       this
     );
+    this.toolStatusBar.show();
 
     this.toolStatusBarController = new ToolStatusBarController(this.toolStatusBar, () => this.chatService.turnStore.activeMessageId(this.conversationManager.getCurrentConversation()?.id), this);
 
@@ -759,12 +763,31 @@ export class ChatView extends ItemView {
       () => {
         this.sendCoordinator.handleStopGeneration();
       },
-      () => this.conversationManager.getCurrentConversation() !== null,
+      () => this.conversationManager.getCurrentConversation() !== null || (this.chatService?.hasConfiguredProviders?.() ?? false),
       this, // Pass Component for registerDomEvent
       () => this.liveVoiceController?.stop(),
       () => this.getEffectiveVoiceLLMSettings()
     );
 
+    const popoverContainer = this.getChatContainer() ?? this.containerEl;
+    this.modelPopover = new ChatModelPopover({
+      containerEl: popoverContainer,
+      modelAgentManager: this.modelAgentManager,
+      getConversationId: () => this.conversationManager.getCurrentConversation()?.id ?? null,
+      component: this,
+      onChanged: () => {
+        this.refreshModelPill();
+        void this.updateContextProgress();
+      },
+      onVisibilityChange: (isOpen) => {
+        this.chatInput?.setModelPillOpen(isOpen);
+      }
+    });
+
+    this.chatInput.setModelPillClickHandler((anchorEl) => {
+      this.modelPopover?.toggle(anchorEl);
+    });
+    this.refreshModelPill();
     this.liveVoiceController = new ChatLiveVoiceController({
       app: this.app,
       chatInput: this.chatInput,
@@ -796,11 +819,30 @@ export class ChatView extends ItemView {
     ChatEventBinder.bindNewChatButton(
       this.layoutElements.newChatButton,
       () => {
+        this.modelPopover?.close();
         void this.conversationManager.createNewConversation();
         this.closeConversationListOnMobile();
       },
       this
     );
+
+    if (this.layoutElements.topNewChatButton) {
+      ChatEventBinder.bindNewChatButton(
+        this.layoutElements.topNewChatButton,
+        () => {
+          this.modelPopover?.close();
+          void this.conversationManager.createNewConversation();
+          this.closeConversationListOnMobile();
+        },
+        this
+      );
+    }
+
+    if (this.layoutElements.renameButton) {
+      this.registerDomEvent(this.layoutElements.renameButton, 'click', () => {
+        void this.conversationManager.promptRenameConversation();
+      });
+    }
 
     ChatEventBinder.bindSettingsButton(
       this.layoutElements.settingsButton,
@@ -843,8 +885,15 @@ export class ChatView extends ItemView {
     // A provider save can change the selected model's window, e.g. an
     // OpenAI-compatible model raised from its 4,096 fallback.
     this.registerEvent(LLMSettingsNotifier.onSettingsChanged(() => {
+      this.chatInput?.setConversationState(
+        this.conversationManager?.getCurrentConversation() !== null ||
+        (this.chatService?.hasConfiguredProviders?.() ?? false)
+      );
       void this.modelAgentManager.followModelWindowChange()
-        .then(() => this.updateContextProgress())
+        .then(() => {
+          this.refreshModelPill();
+          return this.updateContextProgress();
+        })
         .catch(error => console.error('[ChatView] Failed to refresh the model window:', error));
     }));
 
@@ -947,12 +996,21 @@ export class ChatView extends ItemView {
       this.modelAgentManager.setCurrentConversationId(currentConversation.id);
     }
 
+    this.modelPopover?.close();
     const modal = new ChatSettingsModal(
       this.app,
       currentConversation?.id || null,
       workspaceService,
       this.modelAgentManager
     );
+    const originalOnClose = modal.onClose.bind(modal);
+    modal.onClose = () => {
+      originalOnClose();
+      if (!this.isClosing) {
+        this.refreshModelPill();
+        void this.updateContextProgress();
+      }
+    };
     modal.open();
   }
 
@@ -1140,9 +1198,21 @@ export class ChatView extends ItemView {
   }
 
   private handleModelChanged(_model: ModelOption | null): void {
+    this.refreshModelPill();
     void this.updateContextProgress();
   }
 
+  private refreshModelPill(): void {
+    if (!this.chatInput || !this.modelAgentManager) {
+      return;
+    }
+    const { modelName, effortLabel } = resolveModelPillInfo(
+      this.modelAgentManager.getSelectedModel(),
+      this.modelAgentManager.getThinkingSettings()
+    );
+    this.chatInput.updateModelPill(modelName, effortLabel);
+    this.modelPopover?.refresh();
+  }
   private handlePromptChanged(_prompt: PromptOption | null): void {
     // Prompt changed
   }
@@ -1256,11 +1326,14 @@ export class ChatView extends ItemView {
   private updateChatTitle(): void {
     const conversation = this.conversationManager.getCurrentConversation();
 
-    if (this.layoutElements.chatTitle) {
-      const title = conversation?.title || 'Nexus Chat';
+    if (this.layoutElements?.chatTitle) {
+      const title = conversation?.title || 'New conversation';
       this.layoutElements.chatTitle.textContent = title;
       this.layoutElements.chatTitle.setAttr('title', title);
     }
+
+    this.layoutElements?.renameButton?.toggleClass('is-hidden', !conversation);
+    this.refreshModelPill();
   }
 
   // Tool event handlers delegated to coordinator
@@ -1297,6 +1370,8 @@ export class ChatView extends ItemView {
     this.messageDisplay?.cleanup();
     this.liveVoiceController?.cleanup();
     this.liveVoiceController = null;
+    this.modelPopover?.cleanup();
+    this.modelPopover = null;
     this.chatInput?.cleanup();
     this.toolStatusBar?.cleanup();
     this.uiStateController?.cleanup();

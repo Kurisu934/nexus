@@ -5,8 +5,8 @@
  * Key notes:
  * - Node.js and Electron APIs are NOT available on mobile (will crash)
  * - iOS does not support regex lookbehind (?<=...)
- * - Tablets use desktop layout, .is-mobile only applies to phones
- * - Use body.is-mobile in CSS for mobile-specific styles
+ * - Obsidian sets .is-mobile on both phones and tablets; tablets also get .is-tablet
+ * - Use body.is-mobile in CSS for mobile-specific styles (and body.is-tablet / body.is-phone to target specifically)
  */
 
 import { Platform } from 'obsidian';
@@ -22,10 +22,24 @@ interface NodeProcess {
 }
 
 /**
- * Check if running on mobile (iOS or Android phone)
+ * Check if running on mobile (iOS or Android phone or tablet)
  */
 export const isMobile = (): boolean => {
     return Platform.isMobile;
+};
+
+/**
+ * Check if running on a tablet (iPad / Android tablet)
+ */
+export const isTablet = (): boolean => {
+    return Platform.isTablet;
+};
+
+/**
+ * Check if running on a phone
+ */
+export const isPhone = (): boolean => {
+    return Platform.isPhone;
 };
 
 /**
@@ -136,8 +150,9 @@ export const getPlatformDebugInfo = (): Record<string, boolean> => {
     return {
         isMobile: Platform.isMobile,
         isDesktop: Platform.isDesktop,
+        isTablet: Platform.isTablet,
+        isPhone: Platform.isPhone,
         isIosApp: Platform.isIosApp,
-        isAndroidApp: Platform.isAndroidApp,
         isMacOS: Platform.isMacOS,
         isWin: Platform.isWin,
         isLinux: Platform.isLinux,

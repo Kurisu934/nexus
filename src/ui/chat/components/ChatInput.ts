@@ -10,10 +10,8 @@ import { ContentEditableHelper } from '../utils/ContentEditableHelper';
 import { ReferenceExtractor, ReferenceMetadata } from '../utils/ReferenceExtractor';
 import { MessageEnhancement } from './suggesters/base/SuggesterInterfaces';
 import { MessageEnhancer } from '../services/MessageEnhancer';
-import { isMobile, isIOS } from '../../../utils/platform';
+import { isMobile } from '../../../utils/platform';
 import { ChatVoiceInputController, ChatVoiceInputState } from '../controllers/ChatVoiceInputController';
-import { ManagedTimeoutTracker } from '../utils/ManagedTimeoutTracker';
-import { ChatKeyboardViewportController } from '../controllers/ChatKeyboardViewportController';
 import type { LiveVoiceComposerState } from '../types/LiveVoiceTypes';
 import type { LLMProviderSettings } from '../../../types/llm/ProviderTypes';
 
@@ -25,7 +23,12 @@ export class ChatInput {
   private liveVoiceComposerElement: HTMLElement | null = null;
   private liveVoiceWaveformElement: HTMLElement | null = null;
   private liveVoiceStopButton: HTMLButtonElement | null = null;
+  private attachButton: HTMLButtonElement | null = null;
+  private modelPillButton: HTMLButtonElement | null = null;
+  private modelPillNameEl: HTMLElement | null = null;
+  private effortTagEl: HTMLElement | null = null;
   private sendButton: HTMLButtonElement | null = null;
+  private onModelPillClick: ((anchorEl: HTMLElement) => void) | null = null;
   private isLoading = false;
   private isPreSendCompacting = false;
   private hasConversation = false;
@@ -35,9 +38,6 @@ export class ChatInput {
   private voiceInputController: ChatVoiceInputController | null = null;
   private voiceVisualResizeObserver: ResizeObserver | null = null;
   private liveVoiceResizeObserver: ResizeObserver | null = null;
-  private timeouts: ManagedTimeoutTracker | null = null;
-  private keyboardViewportController: ChatKeyboardViewportController | null = null;
-
   constructor(
     private container: HTMLElement,
     private onSendMessage: (
@@ -53,9 +53,6 @@ export class ChatInput {
     private onStopLiveVoice?: () => void,
     private getVoiceInputLLMSettings?: () => LLMProviderSettings | null
   ) {
-    if (component) {
-      this.timeouts = new ManagedTimeoutTracker(component);
-    }
     this.render();
   }
 
@@ -100,20 +97,29 @@ export class ChatInput {
     this.container.addClass('chat-input');
     const component = this.component;
 
-    // Input wrapper - contains both textarea and embedded send button
-    this.inputWrapper = this.container.createDiv('chat-input-wrapper');
+    // Unified composer card
+    this.inputWrapper = this.container.createDiv('chat-input-wrapper chat-composer-card');
+
+    // Mobile: Add mobile-specific class for styling
+    if (isMobile()) {
+      this.inputWrapper.addClass('chat-input-mobile');
+    }
+
+    // Composer body: textarea and voice visual overlays
+    const composerBody = this.inputWrapper.createDiv('chat-composer-body');
 
     // Contenteditable input
-    this.inputElement = this.inputWrapper.createDiv('chat-textarea');
+    this.inputElement = composerBody.createDiv('chat-textarea');
     this.inputElement.contentEditable = 'true';
-    this.inputElement.setAttribute('data-placeholder', 'Type your message...');
+    this.inputElement.setAttribute('data-placeholder', 'Ask anything, or type / · @ · [[…');
+    this.inputElement.setAttribute('data-empty', 'true');
     this.inputElement.setAttribute('role', 'textbox');
     this.inputElement.setAttribute('aria-multiline', 'true');
 
-    this.voiceVisualElement = this.inputWrapper.createDiv('chat-voice-visual');
+    this.voiceVisualElement = composerBody.createDiv('chat-voice-visual');
     this.voiceVisualElement.setAttribute('aria-hidden', 'true');
 
-    this.liveVoiceComposerElement = this.inputWrapper.createDiv('chat-live-composer');
+    this.liveVoiceComposerElement = composerBody.createDiv('chat-live-composer');
     this.liveVoiceComposerElement.setAttribute('role', 'group');
     this.liveVoiceComposerElement.setAttribute('aria-label', 'Live voice session');
     this.liveVoiceComposerElement.createSpan('chat-live-dot');
@@ -129,14 +135,19 @@ export class ChatInput {
       this.onStopLiveVoice?.();
     });
 
-    // Handle Enter key (send) and Shift+Enter (new line)
+    // Handle Enter key (send) and Shift+Enter (new line), guarding IME composition
     const keydownHandler = (e: KeyboardEvent) => {
+      if (e.isComposing || e.key === 'Process' || Reflect.get(e, 'keyCode') === 229) {
+        return;
+      }
+
       if (e.key === 'Enter' && !e.shiftKey) {
         // Don't send if any suggester is active (let suggester handle it)
         const anySuggesterActive =
           this.suggesters?.noteSuggester?.getIsActive() ||
           this.suggesters?.toolSuggester?.getIsActive() ||
-          this.suggesters?.promptSuggester?.getIsActive();
+          this.suggesters?.promptSuggester?.getIsActive() ||
+          this.suggesters?.workspaceSuggester?.getIsActive();
 
         if (!anySuggesterActive) {
           e.preventDefault();
@@ -147,42 +158,65 @@ export class ChatInput {
 
     // Auto-resize on input
     const inputHandler = () => {
+      this.syncEmptyState();
       this.autoResizeInput();
       this.updateUI();
-    };
-
-    // iOS: keep the focused input visible while the keyboard animates.
-    // The controller's own focus handler schedules settling probes at
-    // 0/60/180/320ms so we only need to scroll the input into view here.
-    const focusHandler = () => {
-      const run = () => {
-        this.inputElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      };
-      if (this.timeouts) {
-        this.timeouts.schedule(run, 300);
-      } else {
-        window.setTimeout(run, 300);
-      }
     };
 
     // Register events with component for auto-cleanup
     if (component) {
       component.registerDomEvent(this.inputElement, 'keydown', keydownHandler);
       component.registerDomEvent(this.inputElement, 'input', inputHandler);
-      if (isIOS()) {
-        component.registerDomEvent(this.inputElement, 'focus', focusHandler);
+    }
+
+    // Composer footer: left tool triggers + model/effort pill, right send action
+    const composerFooter = this.inputWrapper.createDiv('chat-composer-footer');
+    const composerTools = composerFooter.createDiv('chat-composer-tools');
+
+    this.attachButton = composerTools.createEl('button', {
+      cls: 'chat-attach-button clickable-icon',
+      attr: {
+        type: 'button',
+        'aria-label': 'Reference note',
+        title: 'Reference note'
       }
-    }
+    });
+    setIcon(this.attachButton, 'plus');
+    component?.registerDomEvent(this.attachButton, 'click', () => {
+      this.insertTrigger('[[');
+    });
 
-    // Mobile: Add mobile-specific class for styling
-    if (isMobile()) {
-      this.inputWrapper.addClass('chat-input-mobile');
-      this.initializeKeyboardViewportHandling();
-    }
+    this.modelPillButton = composerTools.createEl('button', {
+      cls: 'chat-model-pill clickable-icon',
+      attr: {
+        type: 'button',
+        'aria-label': 'Select model and thinking effort',
+        'aria-haspopup': 'dialog',
+        'aria-expanded': 'false'
+      }
+    });
+    this.modelPillNameEl = this.modelPillButton.createSpan({
+      cls: 'chat-model-pill-name',
+      text: 'Select model'
+    });
+    this.effortTagEl = this.modelPillButton.createSpan({
+      cls: 'chat-effort-tag is-hidden'
+    });
+    const modelPillChevron = this.modelPillButton.createSpan({
+      cls: 'chat-model-pill-chevron',
+      attr: { 'aria-hidden': 'true' }
+    });
+    setIcon(modelPillChevron, 'chevron-up');
+    component?.registerDomEvent(this.modelPillButton, 'click', () => {
+      if (this.modelPillButton) {
+        this.onModelPillClick?.(this.modelPillButton);
+      }
+    });
 
-    // Send button - embedded inside the input wrapper (bottom-right)
-    // Uses Obsidian's clickable-icon class for proper icon sizing
-    this.sendButton = this.inputWrapper.createEl('button', {
+    const composerMeta = composerFooter.createDiv('chat-composer-meta');
+
+    // Send button inside composer footer meta cluster
+    this.sendButton = composerMeta.createEl('button', {
       cls: 'chat-send-button clickable-icon'
     });
 
@@ -208,7 +242,7 @@ export class ChatInput {
       },
       onTranscriptReady: (text) => {
         this.setValue(text);
-        this.focus();
+        this.focusInput(true);
       },
       onError: (message) => {
         new Notice(message);
@@ -221,6 +255,7 @@ export class ChatInput {
     this.buildLiveVoiceBars();
 
     this.element = this.container;
+    this.syncEmptyState();
     this.updateUI();
   }
 
@@ -290,6 +325,7 @@ export class ChatInput {
 
     // Clear the input
     ContentEditableHelper.clear(this.inputElement);
+    this.syncEmptyState();
     this.autoResizeInput();
 
     // Send the message with enhancement
@@ -297,12 +333,14 @@ export class ChatInput {
       const sent = await this.onSendMessage(message, enhancement, metadata);
       if (!sent && this.inputElement === originalInput && !this.getValue().trim()) {
         originalInput.replaceChildren(...draftNodes);
+        this.syncEmptyState();
         this.autoResizeInput();
         this.updateUI();
       }
     } catch (error) {
       if (this.inputElement === originalInput && !this.getValue().trim()) {
         originalInput.replaceChildren(...draftNodes);
+        this.syncEmptyState();
         this.autoResizeInput();
         this.updateUI();
       }
@@ -320,17 +358,8 @@ export class ChatInput {
     this.inputElement.style.removeProperty('--chat-input-height');
 
     // Set height limits - matches CSS min/max heights
-    const keyboardActive = isMobile() && (this.keyboardViewportController?.isActive() ?? false);
-    const keyboardEditorHeight = this.keyboardViewportController?.getEditorHeight() ?? 0;
-    const visualHeight = window.visualViewport?.height ?? window.innerHeight;
-    const keyboardMinHeight = keyboardEditorHeight > 0
-      ? keyboardEditorHeight
-      : Math.min(280, Math.max(185, Math.round(visualHeight * 0.42)));
-    const keyboardMaxHeight = keyboardEditorHeight > 0
-      ? keyboardEditorHeight
-      : Math.min(320, Math.max(235, Math.round(visualHeight * 0.54)));
-    const minHeight = keyboardActive ? keyboardMinHeight : isMobile() ? 64 : 72;
-    const maxHeight = keyboardActive ? keyboardMaxHeight : isMobile() ? 160 : 200;
+    const minHeight = isMobile() ? 64 : 72;
+    const maxHeight = isMobile() ? 160 : 200;
     const newHeight = Math.min(Math.max(this.inputElement.scrollHeight, minHeight), maxHeight);
 
     // Write computed height as a CSS custom property consumed by styles.css
@@ -352,6 +381,8 @@ export class ChatInput {
   private updateUI(): void {
     if (!this.sendButton || !this.inputElement) return;
 
+    this.syncEmptyState();
+
     const actuallyLoading = this.isLoading || this.getLoadingState();
     const hasConversation = this.getHasConversation ? this.getHasConversation() : this.hasConversation;
     const hasPendingInput = this.hasPendingInput();
@@ -364,16 +395,27 @@ export class ChatInput {
       this.container.removeClass('chat-input-compacting');
     }
 
+    if (this.attachButton) {
+      this.attachButton.disabled =
+        !hasConversation ||
+        this.isPreSendCompacting ||
+        this.liveVoiceState !== 'inactive' ||
+        this.voiceInputState !== 'idle';
+    }
+    if (this.modelPillButton) {
+      this.modelPillButton.disabled = !hasConversation;
+    }
+
     if (!hasConversation) {
-      // No conversation selected - disable everything
+      // No providers configured - disable composer
       this.sendButton.disabled = true;
       this.sendButton.classList.remove('stop-mode');
       this.sendButton.classList.add('disabled-mode');
       this.sendButton.empty();
       setIcon(this.sendButton, 'arrow-up');
-      this.sendButton.setAttribute('aria-label', 'No conversation selected');
+      this.sendButton.setAttribute('aria-label', 'Configure a provider to start chatting');
       this.inputElement.contentEditable = 'false';
-      this.inputElement.setAttribute('data-placeholder', 'Select or create a conversation to begin');
+      this.inputElement.setAttribute('data-placeholder', 'Configure a provider to start chatting');
     } else if (this.isPreSendCompacting) {
       this.sendButton.disabled = true;
       this.sendButton.classList.remove('stop-mode');
@@ -388,7 +430,7 @@ export class ChatInput {
       this.sendButton.classList.remove('stop-mode');
       this.sendButton.classList.add('disabled-mode');
       this.inputElement.contentEditable = 'false';
-      this.inputElement.setAttribute('data-placeholder', 'Type your message...');
+      this.inputElement.setAttribute('data-placeholder', 'Ask anything, or type / · @ · [[…');
       if (this.liveVoiceStopButton) {
         this.liveVoiceStopButton.disabled = false;
       }
@@ -419,7 +461,7 @@ export class ChatInput {
       setIcon(this.sendButton, 'square');
       this.sendButton.setAttribute('aria-label', 'Stop recording');
       this.inputElement.contentEditable = 'false';
-      this.inputElement.setAttribute('data-placeholder', 'Type your message...');
+      this.inputElement.setAttribute('data-placeholder', 'Ask anything, or type / · @ · [[…');
     } else if (this.voiceInputState === 'transcribing') {
       this.sendButton.disabled = true;
       this.sendButton.classList.add('stop-mode');
@@ -428,7 +470,7 @@ export class ChatInput {
       setIcon(this.sendButton, 'square');
       this.sendButton.setAttribute('aria-label', 'Finishing transcription');
       this.inputElement.contentEditable = 'false';
-      this.inputElement.setAttribute('data-placeholder', 'Type your message...');
+      this.inputElement.setAttribute('data-placeholder', 'Ask anything, or type / · @ · [[…');
     } else if (!hasPendingInput && canUseVoiceInput) {
       this.sendButton.disabled = false;
       this.sendButton.classList.remove('stop-mode');
@@ -437,7 +479,7 @@ export class ChatInput {
       setIcon(this.sendButton, 'mic');
       this.sendButton.setAttribute('aria-label', 'Start voice input');
       this.inputElement.contentEditable = 'true';
-      this.inputElement.setAttribute('data-placeholder', 'Type your message...');
+      this.inputElement.setAttribute('data-placeholder', 'Ask anything, or type / · @ · [[…');
     } else {
       // Show normal send button
       this.sendButton.disabled = false;
@@ -447,7 +489,7 @@ export class ChatInput {
       setIcon(this.sendButton, 'arrow-up');
       this.sendButton.setAttribute('aria-label', 'Send message');
       this.inputElement.contentEditable = 'true';
-      this.inputElement.setAttribute('data-placeholder', 'Type your message...');
+      this.inputElement.setAttribute('data-placeholder', 'Ask anything, or type / · @ · [[…');
     }
 
     this.updateVoiceVisual();
@@ -465,9 +507,75 @@ export class ChatInput {
    * Focus the input
    */
   focus(): void {
-    if (this.inputElement) {
-      ContentEditableHelper.focus(this.inputElement);
+    this.focusInput(false);
+  }
+
+  /**
+   * Focus the input; on mobile only focuses when explicitly triggered by user action.
+   */
+  focusInput(allowMobile = false): void {
+    if (!this.inputElement) {
+      return;
     }
+    if (isMobile() && !allowMobile) {
+      return;
+    }
+    ContentEditableHelper.focus(this.inputElement);
+  }
+
+  setModelPillClickHandler(handler: (anchorEl: HTMLElement) => void): void {
+    this.onModelPillClick = handler;
+  }
+
+  setModelPillOpen(open: boolean): void {
+    if (!this.modelPillButton) return;
+    this.modelPillButton.toggleClass('is-open', open);
+    this.modelPillButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  updateModelPill(modelName: string, effortLabel: string | null): void {
+    if (this.modelPillNameEl) {
+      this.modelPillNameEl.textContent = modelName || 'Select model';
+    }
+    if (this.effortTagEl) {
+      if (effortLabel && effortLabel.trim().length > 0) {
+        this.effortTagEl.textContent = effortLabel;
+        this.effortTagEl.removeClass('is-hidden');
+      } else {
+        this.effortTagEl.textContent = '';
+        this.effortTagEl.addClass('is-hidden');
+      }
+    }
+  }
+
+  insertTrigger(trigger: string): void {
+    if (!this.inputElement || this.inputElement.contentEditable !== 'true') {
+      return;
+    }
+
+    const currentText = ContentEditableHelper.getPlainText(this.inputElement);
+    const needsLeadingSpace = currentText.length > 0 && !/\s$/.test(currentText);
+    const addition = `${needsLeadingSpace ? ' ' : ''}${trigger}`;
+
+    const doc = this.inputElement.ownerDocument ?? (typeof document !== 'undefined' ? document : null);
+    if (doc && typeof doc.createTextNode === 'function' && typeof this.inputElement.appendChild === 'function') {
+      this.inputElement.appendChild(doc.createTextNode(addition));
+    } else {
+      ContentEditableHelper.setPlainText(this.inputElement, `${currentText}${addition}`);
+    }
+    this.focusInput(true);
+    this.syncEmptyState();
+    this.autoResizeInput();
+    this.updateUI();
+    this.inputElement.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  private syncEmptyState(): void {
+    if (!this.inputElement || typeof this.inputElement.setAttribute !== 'function') {
+      return;
+    }
+    const isEmpty = (this.inputElement.textContent ?? '').trim().length === 0;
+    this.inputElement.setAttribute('data-empty', isEmpty ? 'true' : 'false');
   }
 
   /**
@@ -476,6 +584,7 @@ export class ChatInput {
   clear(): void {
     if (this.inputElement) {
       ContentEditableHelper.clear(this.inputElement);
+      this.syncEmptyState();
       this.autoResizeInput();
       this.updateUI();
     }
@@ -494,6 +603,7 @@ export class ChatInput {
   setValue(value: string): void {
     if (this.inputElement) {
       ContentEditableHelper.setPlainText(this.inputElement, value);
+      this.syncEmptyState();
       this.autoResizeInput();
       this.updateUI();
     }
@@ -529,8 +639,6 @@ export class ChatInput {
    * Cleanup resources
    */
   cleanup(): void {
-    this.keyboardViewportController?.detach();
-    this.keyboardViewportController = null;
     this.voiceVisualResizeObserver?.disconnect();
     this.voiceVisualResizeObserver = null;
     this.liveVoiceResizeObserver?.disconnect();
@@ -550,23 +658,12 @@ export class ChatInput {
     this.liveVoiceComposerElement = null;
     this.liveVoiceWaveformElement = null;
     this.liveVoiceStopButton = null;
+    this.attachButton = null;
+    this.modelPillButton = null;
+    this.modelPillNameEl = null;
+    this.effortTagEl = null;
     this.sendButton = null;
-  }
-
-  private initializeKeyboardViewportHandling(): void {
-    if (!this.component || !this.inputElement) {
-      return;
-    }
-
-    this.keyboardViewportController?.detach();
-    this.keyboardViewportController = new ChatKeyboardViewportController({
-      container: this.container,
-      inputElement: this.inputElement,
-      getSendButton: () => this.sendButton,
-      onOffsetChanged: () => this.autoResizeInput(),
-      component: this.component,
-    });
-    this.keyboardViewportController.attach();
+    this.onModelPillClick = null;
   }
 
   private canUseVoiceInput(): boolean {

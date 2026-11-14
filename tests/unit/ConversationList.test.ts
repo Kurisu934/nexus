@@ -9,6 +9,7 @@
 
 import { Component } from 'obsidian';
 import { createMockElement } from '../mocks/obsidian/core';
+import { createFakeRoot } from '../mocks/obsidian/dom';
 import { ConversationList } from '../../src/ui/chat/components/ConversationList';
 import { ConversationData } from '../../src/types/chat/ChatTypes';
 import {
@@ -386,6 +387,90 @@ describe('ConversationList — Pagination UI', () => {
       list.cleanup();
 
       // No error means clearPendingDeleteConversation handled null timer gracefully
+    });
+  });
+
+  // ========================================================================
+  // Delete confirmation visual state
+  // ========================================================================
+
+  describe('delete confirmation', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should mark delete button with is-confirming-delete on first tap and delete on second tap', () => {
+      jest.useFakeTimers();
+      const root = createFakeRoot();
+      const onDelete = jest.fn();
+      const component = new Component();
+      component.load();
+
+      const list = new ConversationList(
+        root as unknown as HTMLElement,
+        jest.fn(),
+        onDelete,
+        jest.fn(),
+        component,
+        jest.fn(),
+      );
+      const conversations = createConversationBatch(2);
+      list.setConversations(conversations);
+
+      const deleteButtons = root.querySelectorAll('.conversation-delete-btn');
+      expect(deleteButtons).toHaveLength(2);
+
+      // First tap enters confirming state without deleting
+      deleteButtons[0].click();
+      expect(onDelete).not.toHaveBeenCalled();
+      expect(deleteButtons[0].hasClass('is-confirming-delete')).toBe(true);
+      expect(deleteButtons[0].getAttribute('aria-label')).toBe('Tap again to delete');
+
+      // Tapping another row clears the first row's confirming state
+      deleteButtons[1].click();
+      expect(deleteButtons[0].hasClass('is-confirming-delete')).toBe(false);
+      expect(deleteButtons[0].getAttribute('aria-label')).toBe('Delete conversation');
+      expect(deleteButtons[1].hasClass('is-confirming-delete')).toBe(true);
+
+      // Second tap on same row triggers deletion and clears state
+      deleteButtons[1].click();
+      expect(onDelete).toHaveBeenCalledWith(conversations[1].id);
+      expect(deleteButtons[1].hasClass('is-confirming-delete')).toBe(false);
+      expect(deleteButtons[1].getAttribute('aria-label')).toBe('Delete conversation');
+
+      list.cleanup();
+      component.unload();
+    });
+
+    it('should clear confirming state after timeout or cleanup', () => {
+      jest.useFakeTimers();
+      const root = createFakeRoot();
+      const component = new Component();
+      component.load();
+
+      const list = new ConversationList(
+        root as unknown as HTMLElement,
+        jest.fn(),
+        jest.fn(),
+        jest.fn(),
+        component,
+        jest.fn(),
+      );
+      list.setConversations(createConversationBatch(1));
+
+      const deleteBtn = root.querySelectorAll('.conversation-delete-btn')[0];
+      deleteBtn.click();
+      expect(deleteBtn.hasClass('is-confirming-delete')).toBe(true);
+
+      jest.advanceTimersByTime(5000);
+      expect(deleteBtn.hasClass('is-confirming-delete')).toBe(false);
+      expect(deleteBtn.getAttribute('aria-label')).toBe('Delete conversation');
+
+      deleteBtn.click();
+      expect(deleteBtn.hasClass('is-confirming-delete')).toBe(true);
+      list.cleanup();
+      expect(deleteBtn.hasClass('is-confirming-delete')).toBe(false);
+      component.unload();
     });
   });
 });

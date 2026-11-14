@@ -19,10 +19,29 @@ export interface ConversationManagerEvents {
 /** Default number of conversations per page */
 const PAGE_SIZE = 20;
 
+export const DEFAULT_NEW_CONVERSATION_TITLE = 'New chat';
+
+/**
+ * Derive a clean single-line conversation title from a user message.
+ */
+export function deriveConversationTitleFromMessage(message: string): string {
+  const clean = message
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^[#>`\s]+/, '')
+    .trim();
+
+  if (!clean) {
+    return DEFAULT_NEW_CONVERSATION_TITLE;
+  }
+
+  return clean.length > 50 ? clean.substring(0, 47) + '...' : clean;
+}
+
 export class ConversationManager {
   private currentConversation: ConversationData | null = null;
   private conversations: ConversationData[] = [];
-
+  private autoTitledConversationIds = new Set<string>();
   // Pagination state
   private currentPage = 0;
   private _hasMore = false;
@@ -230,13 +249,19 @@ export class ConversationManager {
    */
   async createNewConversation(title?: string): Promise<void> {
     try {
-      // Prompt for title if not provided
-      const conversationTitle = title || await this.promptForConversationTitle();
-      if (!conversationTitle) return; // User cancelled
+      const trimmedTitle = title?.trim();
+      const isAutoTitled = !trimmedTitle;
+      const conversationTitle = trimmedTitle || DEFAULT_NEW_CONVERSATION_TITLE;
 
       const result = await this.chatService.createConversation(conversationTitle);
 
       if (result.success && result.conversationId) {
+        if (isAutoTitled) {
+          this.autoTitledConversationIds.add(result.conversationId);
+        } else {
+          this.autoTitledConversationIds.delete(result.conversationId);
+        }
+
         // Reload conversations and select the new one
         await this.loadConversations();
         const newConversation = await this.chatService.getConversation(result.conversationId);
@@ -264,7 +289,7 @@ export class ConversationManager {
       sessionId?: string;
     }
   ): Promise<void> {
-    const title = message.length > 50 ? message.substring(0, 47) + '...' : message;
+    const title = deriveConversationTitleFromMessage(message);
 
     try {
       const result = await this.chatService.createConversation(
@@ -307,6 +332,8 @@ export class ConversationManager {
       const success = await this.chatService.deleteConversation(conversationId);
 
       if (success) {
+        this.autoTitledConversationIds.delete(conversationId);
+
         // If this was the current conversation, clear it
         if (this.currentConversation?.id === conversationId) {
           this.currentConversation = null;
@@ -327,19 +354,26 @@ export class ConversationManager {
    * Rename a conversation
    */
   async renameConversation(conversationId: string, newTitle: string): Promise<void> {
+    const trimmedTitle = newTitle.trim();
+    if (!trimmedTitle) {
+      return;
+    }
+
+    this.autoTitledConversationIds.delete(conversationId);
+
     try {
-      const success = await this.chatService.updateConversationTitle(conversationId, newTitle);
+      const success = await this.chatService.updateConversationTitle(conversationId, trimmedTitle);
 
       if (success) {
         // Update current conversation title if this is the active one
         if (this.currentConversation?.id === conversationId) {
-          this.currentConversation.title = newTitle;
+          this.currentConversation.title = trimmedTitle;
         }
 
         // Update title in the local conversations list
         const conversation = this.conversations.find(c => c.id === conversationId);
         if (conversation) {
-          conversation.title = newTitle;
+          conversation.title = trimmedTitle;
         }
 
         // Notify UI of the change
@@ -349,6 +383,50 @@ export class ConversationManager {
       }
     } catch {
       this.events.onError('Failed to rename conversation');
+    }
+  }
+
+  /**
+   * Auto-title an empty default-titled conversation from its first user message.
+   */
+  async autoTitleConversationFromFirstMessage(conversationId: string, message: string): Promise<void> {
+    const isCurrentEmptyDefault =
+      this.currentConversation?.id === conversationId &&
+      this.currentConversation.messages.length === 0 &&
+      this.currentConversation.title === DEFAULT_NEW_CONVERSATION_TITLE;
+
+    if (!this.autoTitledConversationIds.has(conversationId) && !isCurrentEmptyDefault) {
+      return;
+    }
+
+    this.autoTitledConversationIds.delete(conversationId);
+
+    const derived = deriveConversationTitleFromMessage(message);
+    const existingTitle = this.currentConversation?.id === conversationId
+      ? this.currentConversation.title
+      : this.conversations.find(c => c.id === conversationId)?.title;
+
+    if (derived !== existingTitle) {
+      await this.renameConversation(conversationId, derived);
+    }
+  }
+
+  /**
+   * Open rename modal for a specific conversation (or the current active one).
+   */
+  async promptRenameConversation(conversationId?: string): Promise<void> {
+    const target = conversationId
+      ? (this.conversations.find(c => c.id === conversationId) ??
+        (this.currentConversation?.id === conversationId ? this.currentConversation : null))
+      : this.currentConversation;
+
+    if (!target) {
+      return;
+    }
+
+    const submittedTitle = await this.promptForRenameTitle(target.title);
+    if (submittedTitle && submittedTitle !== target.title) {
+      await this.renameConversation(target.id, submittedTitle);
     }
   }
 
@@ -369,15 +447,21 @@ export class ConversationManager {
   }
 
   /**
-   * Prompt user for conversation title using Obsidian's Modal
+   * Prompt user to rename a conversation using Obsidian's Modal
    */
-  private async promptForConversationTitle(): Promise<string | null> {
+  private promptForRenameTitle(initialTitle: string): Promise<string | null> {
     return new Promise((resolve) => {
-      const modal = new ConversationTitleModal(this.app, (title) => {
-        resolve(title);
-      });
+      const modal = new ConversationTitleModal(
+        this.app,
+        (title) => {
+          resolve(title);
+        },
+        {
+          initialTitle,
+          mode: 'rename'
+        }
+      );
       modal.open();
     });
   }
-
 }

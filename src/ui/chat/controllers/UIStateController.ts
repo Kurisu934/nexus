@@ -11,6 +11,7 @@ export interface UIStateControllerEvents {
 export class UIStateController {
   private sidebarVisible = false;
   private onOpenProviderSettings?: () => void;
+  private onStarterTrigger?: (trigger: string) => void;
 
   constructor(
     private containerEl: HTMLElement,
@@ -28,6 +29,13 @@ export class UIStateController {
    */
   setOpenProviderSettingsCallback(callback: () => void): void {
     this.onOpenProviderSettings = callback;
+  }
+
+  /**
+   * Set the callback invoked when a starter chip in the ready state is clicked.
+   */
+  setStarterTriggerCallback(callback: (trigger: string) => void): void {
+    this.onStarterTrigger = callback;
   }
 
   /**
@@ -49,45 +57,46 @@ export class UIStateController {
     messageDisplay.addClass('message-display');
 
     const welcome = (messageDisplay as HTMLElement).createDiv('chat-welcome');
-    const welcomeContent = welcome.createDiv('chat-welcome-content');
-
-    const welcomeIcon = welcomeContent.createDiv('chat-welcome-icon');
 
     if (hasConfiguredProviders) {
-      // Normal welcome - ready to create conversation
-      setIcon(welcomeIcon, 'sparkles');
+      // Zero-friction ready state: composer is unlocked and starter chips insert triggers
+      welcome.addClass('chat-ready-state');
+      const hero = welcome.createDiv('chat-ready-hero');
 
-      welcomeContent.createDiv({
-        text: 'Welcome to chat',
-        cls: 'chat-welcome-title'
+      hero.createDiv({
+        text: 'Ready to chat',
+        cls: 'chat-welcome-title chat-ready-title'
       });
 
-      welcomeContent.createEl('p', {
-        text: 'Your AI assistant for exploring and managing your vault.',
-        cls: 'chat-welcome-desc'
+      hero.createEl('p', {
+        text: 'Type a message below to start a new conversation, or pick a shortcut:',
+        cls: 'chat-welcome-desc chat-ready-subtitle'
       });
 
-      // Hotkey hints in a container
-      const hotkeysContainer = welcomeContent.createDiv('chat-welcome-hotkeys-container');
-      const hotkeys = hotkeysContainer.createDiv('chat-welcome-hotkeys');
-
-      const hotkeyData = [
-        { key: '/', desc: 'Select a tool to use' },
-        { key: '@', desc: 'Select an agent to use' },
-        { key: '[[', desc: 'Select a note to reference' }
+      const starterList = hero.createDiv('chat-starter-list');
+      const starters = [
+        { trigger: '[[', label: 'Reference a note' },
+        { trigger: '/', label: 'Select a tool' },
+        { trigger: '@', label: 'Select an agent' }
       ];
 
-      hotkeyData.forEach(h => {
-        const row = hotkeys.createDiv('chat-welcome-hotkey');
-        row.createEl('code', { text: h.key });
-        row.createSpan({ text: h.desc });
-      });
-
-      welcomeContent.createEl('button', {
-        cls: 'chat-welcome-button mod-cta',
-        text: 'Start your first conversation'
+      starters.forEach((starter) => {
+        const chip = starterList.createEl('button', {
+          cls: 'clickable-icon chat-starter-chip',
+          attr: {
+            type: 'button',
+            'aria-label': starter.label
+          }
+        });
+        chip.createSpan({ cls: 'chat-starter-kbd', text: starter.trigger });
+        chip.createSpan({ text: starter.label });
+        this.registerClickHandler(chip, () => {
+          this.onStarterTrigger?.(starter.trigger);
+        });
       });
     } else {
+      const welcomeContent = welcome.createDiv('chat-welcome-content');
+      const welcomeIcon = welcomeContent.createDiv('chat-welcome-icon');
       // Setup needed - no providers configured
       setIcon(welcomeIcon, 'settings');
 
@@ -180,9 +189,9 @@ export class UIStateController {
    * Set input placeholder text
    */
   setInputPlaceholder(placeholder: string): void {
-    const textarea = this.containerEl.querySelector('.chat-textarea') as HTMLTextAreaElement;
+    const textarea = this.containerEl.querySelector<HTMLElement>('.chat-textarea');
     if (textarea) {
-      textarea.placeholder = placeholder;
+      textarea.setAttribute('data-placeholder', placeholder);
     }
   }
 

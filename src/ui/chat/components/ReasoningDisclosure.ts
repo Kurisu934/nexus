@@ -23,7 +23,7 @@ export class ReasoningDisclosure extends Component {
   }
   constructor(parent: HTMLElement, onHold: (hold: boolean) => void) {
     super();
-    this.element = parent.createEl('details', { cls: 'message-reasoning' });
+    this.element = parent.createEl('details', { cls: 'message-reasoning nexus-trace-reasoning' });
     this.element.open = false;
     this.element.setAttribute('data-reasoning-index', '0');
     this.summary = this.element.createEl('summary', { cls: 'message-reasoning-summary' });

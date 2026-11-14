@@ -53,7 +53,7 @@ export class ToolStatusBar {
     this.row2El = this.statusBarEl.createDiv({ cls: 'tool-status-row--meta' });
     
     // Action icons
-    this.inspectBtn = this.row2El.createEl('button', { cls: 'tool-status-inspect-icon' });
+    this.inspectBtn = this.row2El.createEl('button', { cls: 'tool-status-inspect-icon clickable-icon' });
     this.inspectBtn.setAttribute('aria-label', 'Tool history');
     this.inspectBtn.setAttribute('title', 'Tool history');
     setIcon(this.inspectBtn, 'eye');
@@ -61,7 +61,7 @@ export class ToolStatusBar {
       this.component.registerDomEvent(this.inspectBtn, 'click', callbacks.onInspectClick);
     }
     
-    this.taskBtn = this.row2El.createEl('button', { cls: 'tool-status-task-icon' });
+    this.taskBtn = this.row2El.createEl('button', { cls: 'tool-status-task-icon clickable-icon' });
     this.taskBtn.setAttribute('aria-label', 'Task board');
     this.taskBtn.setAttribute('title', 'Task board');
     setIcon(this.taskBtn, 'clipboard-check');
@@ -72,7 +72,7 @@ export class ToolStatusBar {
     // Agent status slot. SubagentController replaces the fallback button with
     // AgentStatusMenu once the subagent executor is ready.
     this.agentSlotEl = this.row2El.createDiv({ cls: 'tool-status-agent-slot' });
-    this.agentFallbackBtn = this.agentSlotEl.createEl('button', { cls: 'tool-status-agent-icon' });
+    this.agentFallbackBtn = this.agentSlotEl.createEl('button', { cls: 'tool-status-agent-icon clickable-icon' });
     this.agentFallbackBtn.setAttribute('aria-label', 'Subagents');
     this.agentFallbackBtn.setAttribute('title', 'Subagents');
     setIcon(this.agentFallbackBtn, 'bot');
@@ -80,7 +80,7 @@ export class ToolStatusBar {
       this.component.registerDomEvent(this.agentFallbackBtn, 'click', callbacks.onAgentClick);
     }
     
-    this.compactBtn = this.row2El.createEl('button', { cls: 'tool-status-compact-icon' });
+    this.compactBtn = this.row2El.createEl('button', { cls: 'tool-status-compact-icon clickable-icon' });
     this.compactBtn.setAttribute('aria-label', 'Compact context');
     this.compactBtn.setAttribute('title', 'Compact context');
     setIcon(this.compactBtn, 'library');

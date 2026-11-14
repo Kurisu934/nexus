@@ -4,10 +4,9 @@
  *
  * This class is responsible for:
  * - Creating the main chat layout structure
- * - Building header with hamburger, title, and settings buttons
- * - Creating message display, input, and context containers
+ * - Building header with thread switcher, rename, voice, new chat, and settings buttons
+ * - Creating message display and unified composer dock containers
  * - Building sidebar with conversation list
- * - Auto-hiding experimental warning banner
  *
  * Used by ChatView to build the initial DOM structure,
  * following the Builder pattern for complex UI construction.
@@ -25,6 +24,9 @@ export interface ChatLayoutElements {
   liveVoiceButton: HTMLElement;
   chatTitle: HTMLElement;
   hamburgerButton: HTMLElement;
+  renameButton: HTMLElement;
+  topNewChatButton: HTMLElement;
+  composerDock: HTMLElement;
   backdrop: HTMLElement;
   sidebarContainer: HTMLElement;
   loadingOverlay: HTMLElement;
@@ -36,7 +38,7 @@ export class ChatLayoutBuilder {
   /**
    * Build the complete chat interface layout
    */
-  static buildLayout(container: HTMLElement, component: Component): ChatLayoutElements {
+  static buildLayout(container: HTMLElement, _component?: Component): ChatLayoutElements {
     container.empty();
     container.addClass('chat-view-container');
 
@@ -44,11 +46,15 @@ export class ChatLayoutBuilder {
     const chatLayout = container.createDiv('chat-layout');
     const mainContainer = chatLayout.createDiv('chat-main');
 
-    // Experimental warning banner
-    this.createWarningBanner(mainContainer, component);
-
     // Header
-    const { chatTitle, hamburgerButton, liveVoiceButton, settingsButton } = this.createHeader(mainContainer);
+    const {
+      chatTitle,
+      hamburgerButton,
+      renameButton,
+      liveVoiceButton,
+      topNewChatButton,
+      settingsButton
+    } = this.createHeader(mainContainer);
 
     // Branch header container (above messages, separate from message container)
     // This ensures BranchHeader isn't clobbered when MessageDisplay.setConversation() empties the message container
@@ -56,8 +62,9 @@ export class ChatLayoutBuilder {
 
     // Main content areas
     const messageContainer = mainContainer.createDiv('message-display-container');
-    const toolStatusBarContainer = mainContainer.createDiv('tool-status-bar-container');
-    const inputContainer = mainContainer.createDiv('chat-input-container');
+    const composerDock = mainContainer.createDiv('chat-composer-dock');
+    const toolStatusBarContainer = composerDock.createDiv('tool-status-bar-container');
+    const inputContainer = composerDock.createDiv('chat-input-container');
 
     // Nexus model loading overlay (hidden by default)
     const loadingOverlay = this.createLoadingOverlay(mainContainer);
@@ -76,6 +83,9 @@ export class ChatLayoutBuilder {
       liveVoiceButton,
       chatTitle,
       hamburgerButton,
+      renameButton,
+      topNewChatButton,
+      composerDock,
       backdrop,
       sidebarContainer,
       loadingOverlay,
@@ -127,75 +137,85 @@ export class ChatLayoutBuilder {
   }
 
   /**
-   * Create experimental warning banner with auto-hide
-   */
-  private static createWarningBanner(container: HTMLElement, component: Component): void {
-    const warningBanner = container.createDiv('chat-experimental-warning');
-
-    warningBanner.createSpan({ cls: 'warning-icon', text: '⚠️' });
-    warningBanner.createSpan({ cls: 'warning-text', text: 'This chat is in beta.' });
-    const link = warningBanner.createEl('a', { cls: 'warning-link', text: 'Report issues' });
-    link.href = 'https://github.com/ProfSynapse/nexus/issues';
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    warningBanner.createSpan({ cls: 'warning-text', text: 'Use at your own risk.' });
-
-    // Auto-hide warning after 5 seconds — guard against detached DOM
-    let fadeoutTimer: number | null = null;
-    const hideTimer = window.setTimeout(() => {
-      if (!warningBanner.isConnected) return;
-      warningBanner.addClass('chat-warning-banner-fadeout');
-      fadeoutTimer = window.setTimeout(() => {
-        if (!warningBanner.isConnected) return;
-        warningBanner.addClass('chat-loading-overlay-hidden');
-        fadeoutTimer = null;
-      }, 500);
-    }, 5000);
-
-    // Clear timers if the banner is removed early (e.g., view closed)
-    const observer = new MutationObserver(() => {
-      if (!warningBanner.isConnected) {
-        window.clearTimeout(hideTimer);
-        if (fadeoutTimer) window.clearTimeout(fadeoutTimer);
-        observer.disconnect();
-      }
-    });
-    if (warningBanner.parentElement) {
-      observer.observe(warningBanner.parentElement, { childList: true });
-    }
-    component.register(() => observer.disconnect());
-  }
-
-  /**
-   * Create chat header with hamburger, title, and settings
+   * Create chat header with thread switcher, rename, voice, new chat, and settings
    */
   private static createHeader(container: HTMLElement): {
     chatTitle: HTMLElement;
     hamburgerButton: HTMLElement;
+    renameButton: HTMLElement;
     liveVoiceButton: HTMLElement;
+    topNewChatButton: HTMLElement;
     settingsButton: HTMLElement;
   } {
-    const chatHeader = container.createDiv('chat-header');
+    const chatHeader = container.createDiv('chat-header chat-topbar');
+    const topbarLeft = chatHeader.createDiv('chat-topbar-left');
 
-    const hamburgerButton = chatHeader.createEl('button', { cls: 'chat-hamburger-button' });
-    setIcon(hamburgerButton, 'menu');
-    hamburgerButton.setAttribute('aria-label', 'Toggle conversations');
+    const hamburgerButton = topbarLeft.createEl('button', {
+      cls: 'chat-hamburger-button chat-thread-switcher clickable-icon',
+      attr: {
+        type: 'button',
+        'aria-label': 'Toggle conversations',
+        title: 'Toggle conversations'
+      }
+    });
+    const switcherIcon = hamburgerButton.createSpan({ cls: 'chat-thread-switcher-icon' });
+    setIcon(switcherIcon, 'panel-left');
 
-    // Center: Title
-    const chatTitle = chatHeader.createDiv('chat-title');
-    chatTitle.textContent = 'Chat';
+    const chatTitle = hamburgerButton.createSpan({ cls: 'chat-title', text: 'New conversation' });
 
-    const liveVoiceButton = chatHeader.createEl('button', { cls: 'chat-live-voice-button' });
+    const chevronIcon = hamburgerButton.createSpan({ cls: 'chat-thread-chevron' });
+    setIcon(chevronIcon, 'chevron-down');
+
+    const renameButton = topbarLeft.createEl('button', {
+      cls: 'chat-rename-button clickable-icon is-hidden',
+      attr: {
+        type: 'button',
+        'aria-label': 'Rename conversation',
+        title: 'Rename conversation'
+      }
+    });
+    setIcon(renameButton, 'pencil');
+
+    const topbarActions = chatHeader.createDiv('chat-topbar-actions');
+
+    const liveVoiceButton = topbarActions.createEl('button', {
+      cls: 'chat-live-voice-button clickable-icon',
+      attr: {
+        type: 'button',
+        'aria-label': 'Start live voice',
+        title: 'Start live voice'
+      }
+    });
     setIcon(liveVoiceButton, 'audio-waveform');
-    liveVoiceButton.setAttribute('aria-label', 'Start live voice');
-    liveVoiceButton.setAttribute('title', 'Start live voice');
 
-    // Right: Settings gear icon
-    const settingsButton = chatHeader.createEl('button', { cls: 'chat-settings-button' });
-    setIcon(settingsButton, 'settings');
-    settingsButton.setAttribute('aria-label', 'Chat settings');
+    const topNewChatButton = topbarActions.createEl('button', {
+      cls: 'chat-topbar-new-button clickable-icon',
+      attr: {
+        type: 'button',
+        'aria-label': 'New conversation',
+        title: 'New conversation'
+      }
+    });
+    setIcon(topNewChatButton, 'square-pen');
 
-    return { chatTitle, hamburgerButton, liveVoiceButton, settingsButton };
+    const settingsButton = topbarActions.createEl('button', {
+      cls: 'chat-settings-button clickable-icon',
+      attr: {
+        type: 'button',
+        'aria-label': 'Chat settings',
+        title: 'Chat settings'
+      }
+    });
+    setIcon(settingsButton, 'sliders-horizontal');
+
+    return {
+      chatTitle,
+      hamburgerButton,
+      renameButton,
+      liveVoiceButton,
+      topNewChatButton,
+      settingsButton
+    };
   }
 
   /**
@@ -213,8 +233,9 @@ export class ChatLayoutBuilder {
     const sidebarHeader = sidebarContainer.createDiv('chat-sidebar-header');
     sidebarHeader.createEl('h3', { text: 'Conversations' });
     const newChatButton = sidebarHeader.createEl('button', {
-      cls: 'chat-new-button',
-      text: 'New chat'
+      cls: 'chat-new-button clickable-icon',
+      text: 'New chat',
+      attr: { type: 'button' }
     });
 
     // Search input between header and list

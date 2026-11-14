@@ -148,10 +148,34 @@ describe('ChatSessionCoordinator', () => {
     expect(harness.modelAgentManager.initializeDefaults).toHaveBeenCalledTimes(1);
     expect(harness.chatService.hasConfiguredProviders).toHaveBeenCalledTimes(1);
     expect(harness.uiStateController.showWelcomeState).toHaveBeenCalledWith(true);
-    expect(harness.chatTitleEl.textContent).toBe('Chat');
-    expect(harness.chatInput.setConversationState).toHaveBeenCalledWith(false);
+    expect(harness.onUpdateChatTitle).toHaveBeenCalledTimes(1);
+    expect(harness.chatTitleEl.textContent).toBe('New conversation');
+    expect(harness.chatInput.setConversationState).toHaveBeenCalledWith(true);
     expect(harness.component.registerDomEvent).toHaveBeenCalledTimes(1);
     expect(harness.containerEl.querySelector('.chat-welcome-button')).not.toBeNull();
+  });
+
+  it('keeps composer disabled in welcome state when no providers are configured', async () => {
+    const harness = createCoordinatorHarness();
+    harness.chatService.hasConfiguredProviders.mockReturnValue(false);
+
+    await harness.coordinator.loadInitialData();
+
+    expect(harness.uiStateController.showWelcomeState).toHaveBeenCalledWith(false);
+    expect(harness.chatTitleEl.textContent).toBe('New conversation');
+    expect(harness.chatInput.setConversationState).toHaveBeenCalledWith(false);
+    expect(harness.component.registerDomEvent).not.toHaveBeenCalled();
+  });
+
+  it('refreshes chat title when active conversations change (e.g., rename)', async () => {
+    const harness = createCoordinatorHarness();
+    const conversation = createConversation('conv-1', 'Renamed');
+    harness.conversationManager.getConversations.mockReturnValue([conversation]);
+    harness.conversationManager.getCurrentConversation.mockReturnValue(conversation);
+
+    await harness.coordinator.handleConversationsChanged();
+
+    expect(harness.onUpdateChatTitle).toHaveBeenCalledTimes(1);
   });
 
   it('sets the current conversation id through ModelAgentManager public API when selecting a conversation', async () => {

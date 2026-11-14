@@ -19,6 +19,7 @@ import { CompactionBudgetService } from '../../../services/chat/CompactionBudget
 import { compactionContextText } from '../../../services/chat/CompactionContext';
 import { previouslyUsedTools } from '../../../services/chat/CompactionToolContext';
 import { loadCompactionTraceContext, traceContextText, type CompactionTraceSource } from '../../../services/chat/CompactionTraceContext';
+import { deriveConversationTitleFromMessage } from './ConversationManager';
 
 export interface MessageExecutionOptions {
   provider?: string;
@@ -38,6 +39,8 @@ export interface MessageExecutionOptions {
 
 interface ConversationManagerLike {
   getCurrentConversation(): ConversationData | null;
+  createNewConversation?(title?: string): Promise<void>;
+  autoTitleConversationFromFirstMessage?(conversationId: string, message: string): Promise<void>;
 }
 
 interface MessageManagerLike {
@@ -64,6 +67,7 @@ interface MessageManagerLike {
 }
 
 interface ModelAgentManagerLike {
+  carrySelectionsIntoNextConversation?(): void;
   waitForContextHandoff?(): Promise<void>;
   isContextHandoffPending?(): boolean;
   getHandoffSystemPrompt?(toolSelectors?: string[]): Promise<string | null>;
@@ -165,8 +169,12 @@ export class ChatSendCoordinator {
       return false;
     }
 
-    const currentConversation = conversationManager.getCurrentConversation();
-    if (!currentConversation) return false;
+    let currentConversation = conversationManager.getCurrentConversation();
+    if (!currentConversation && typeof conversationManager.createNewConversation !== 'function') {
+      return false;
+    }
+
+    let autoCreated = false;
     let sent = false;
     const token = Symbol('pending send');
     const generation = ++this.sendGeneration;
@@ -177,10 +185,28 @@ export class ChatSendCoordinator {
         await messageManager.interruptCurrentGeneration();
       }
 
+      if (!currentConversation) {
+        modelAgentManager.carrySelectionsIntoNextConversation?.();
+        await conversationManager.createNewConversation?.(deriveConversationTitleFromMessage(message));
+        currentConversation = conversationManager.getCurrentConversation();
+        if (!currentConversation) {
+          return false;
+        }
+        autoCreated = true;
+      }
+
       if (conversationManager.getCurrentConversation()?.id !== currentConversation.id) {
         return false;
       }
 
+      if (!autoCreated && currentConversation.messages.length === 0) {
+        await conversationManager.autoTitleConversationFromFirstMessage?.(currentConversation.id, message);
+        const refreshed = conversationManager.getCurrentConversation();
+        if (!refreshed || refreshed.id !== currentConversation.id) {
+          return false;
+        }
+        currentConversation = refreshed;
+      }
       if (enhancement) {
         modelAgentManager.setMessageEnhancement(enhancement);
       }

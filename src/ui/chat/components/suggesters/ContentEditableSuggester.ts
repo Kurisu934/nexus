@@ -143,8 +143,8 @@ export abstract class ContentEditableSuggester<T> {
    * Handle keydown events
    */
   private onKeyDown(e: KeyboardEvent): void {
+    if (e.isComposing || e.key === 'Process' || Reflect.get(e, 'keyCode') === 229) return;
     if (!this.isActive) return;
-
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault();
@@ -237,10 +237,48 @@ export abstract class ContentEditableSuggester<T> {
     if (!this.suggestionContainer) return;
 
     const rect = this.element.getBoundingClientRect();
-    this.suggestionContainer.style.left = rect.left + 'px';
-    const viewportHeight = (this.ownerDocument().defaultView ?? window).innerHeight;
-    this.suggestionContainer.style.bottom = (viewportHeight - rect.top + 4) + 'px';
-    this.suggestionContainer.style.width = rect.width + 'px';
+    const hostWindow = this.ownerDocument().defaultView ?? window;
+    const vv = hostWindow.visualViewport;
+    const viewportLeft = vv?.offsetLeft ?? 0;
+    const viewportTop = vv?.offsetTop ?? 0;
+    const viewportWidth = vv?.width ?? hostWindow.innerWidth ?? Math.max(rect.left + rect.width + 16, 320);
+    const viewportHeight = vv?.height ?? hostWindow.innerHeight ?? 0;
+
+    const minLeft = viewportLeft + 8;
+    const maxRight = viewportLeft + viewportWidth - 8;
+    const maxWidth = Math.max(160, maxRight - minLeft);
+    const targetWidth = Math.min(Math.max(rect.width, 220), maxWidth);
+    const clampedLeft = Math.min(Math.max(rect.left, minLeft), Math.max(minLeft, maxRight - targetWidth));
+
+    this.suggestionContainer.style.left = `${Math.round(clampedLeft)}px`;
+    this.suggestionContainer.style.width = `${Math.round(targetWidth)}px`;
+
+    const rectBottom = rect.bottom ?? (rect.top + (rect.height ?? 0));
+    const spaceAbove = rect.top - viewportTop;
+    const spaceBelow = (viewportTop + viewportHeight) - rectBottom;
+
+    const clearStyleProp = (prop: 'top' | 'bottom') => {
+      const style = this.suggestionContainer?.style;
+      if (!style) return;
+      if (typeof style.removeProperty === 'function') {
+        style.removeProperty(prop);
+      } else {
+        Reflect.deleteProperty(style, prop);
+      }
+    };
+
+    if (spaceAbove < 180 && spaceBelow > spaceAbove) {
+      clearStyleProp('bottom');
+      this.suggestionContainer.style.top = `${Math.round(Math.max(viewportTop + 8, rectBottom + 4))}px`;
+      const maxHeight = Math.max(120, Math.min(320, spaceBelow - 12));
+      this.suggestionContainer.style.maxHeight = `${Math.round(maxHeight)}px`;
+    } else {
+      clearStyleProp('top');
+      const layoutHeight = hostWindow.innerHeight || (viewportTop + viewportHeight);
+      this.suggestionContainer.style.bottom = `${Math.round(Math.max(8, layoutHeight - rect.top + 4))}px`;
+      const maxHeight = spaceAbove > 0 ? Math.max(120, Math.min(320, spaceAbove - 12)) : 320;
+      this.suggestionContainer.style.maxHeight = `${Math.round(maxHeight)}px`;
+    }
   }
 
   /**

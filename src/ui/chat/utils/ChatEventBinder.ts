@@ -29,6 +29,13 @@ export class ChatEventBinder {
   }
 
   /**
+   * Wire up rename conversation button
+   */
+  static bindRenameButton(button: HTMLElement, renameConversation: () => void, component: Component): void {
+    component.registerDomEvent(button, 'click', () => renameConversation());
+  }
+
+  /**
    * Wire up welcome screen button
    */
   static bindWelcomeButton(container: HTMLElement, createNewConversation: () => void, component: Component): void {

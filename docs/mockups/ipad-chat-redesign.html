@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nexus Chat — Native Editorial Redesign (iPadOS &amp; Sidebar)</title>
+  <link rel="stylesheet" href="ipad-chat-redesign.css" />
+</head>
+<body class="theme-dark is-mobile is-ios is-tablet" data-view="ipad">
+  <header class="mock-control-bar">
+    <div class="mock-brand">
+      <strong>Nexus Chat Redesign Mockup</strong>
+      <span>Simulated sample data · Hostile Obsidian <code>.is-tablet button:not(.clickable-icon)</code> active</span>
+    </div>
+    <div class="mock-Controls">
+      <button class="mock-switch-btn is-active" data-set-view="ipad">1. iPad 实景对照 (1568×1081)</button>
+      <button class="mock-switch-btn" data-set-view="states">2. 三态详览 (零门槛就绪 / 模型与Thinking档位 / 自动命名重命名+浅色)</button>
+      <button class="mock-switch-btn" data-toggle-theme>Switch to light theme</button>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       VIEW 1: 1:1 iPad Landscape Scene Matching User's Screenshot (1568x1081)
+       ======================================================================== -->
+  <section class="mock-ipad-viewport">
+    <div class="mock-ios-statusbar">
+      <span>18:43 &nbsp;11月14日周六</span>
+      <div class="mock-ios-statusbar-right">
+        <span>Wi-Fi</span>
+        <span class="mock-vpn-pill">VPN</span>
+        <span>80%</span>
+      </div>
+    </div>
+
+    <div class="mock-obsidian-workspace">
+      <!-- Left Background Obsidian Vault Note -->
+      <div class="mock-editor-pane">
+        <div class="mock-tab-bar">
+          <div class="mock-sidebar-toggle-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          </div>
+          <div class="mock-active-tab">
+            <span>00-AIML-学习路径总览</span>
+            <span>×</span>
+          </div>
+          <span class="mock-sidebar-toggle-icon">+</span>
+        </div>
+
+        <div class="mock-breadcrumb">
+          <span>←</span>
+          <span>→</span>
+          <span>AIML_Basis &nbsp;/&nbsp; 00-AIML-学习路径总览</span>
+        </div>
+
+        <div class="mock-note-prose">
+          <p class="mock-note-lead">
+            表作 DeepSeekMath 与 DeepSeek-R1 的完整知识闭环。所有讲义均采用双向链接，适合在 Obsidian 中按依赖图谱循序渐进研读与实操。
+          </p>
+          <h1 class="mock-note-h1">1 知识模块拓扑依赖图</h1>
+          <div class="mock-topology-box">
+            <div class="mock-topology-caption">模块组一：研发底座与智能体工程 (Engineering &amp; Agents)</div>
+            <div class="mock-topo-node">01. Missing Semester<br/>Shell / Git内核 / SSH / tmux / uv</div>
+            <div class="mock-topo-arrow">↓</div>
+            <div class="mock-topo-node">02. Agent 基础概念<br/>POMDP / ReAct / Workflow / MCP</div>
+            <div class="mock-topo-arrow">↓</div>
+            <div class="mock-topo-node">03. 自己写一个简单 Agent<br/>200行原生 Tool-Calling 沙箱实战</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Floating Obsidian 1.11+ Drawer (.workspace-drawer.mod-right) -->
+      <aside class="mock-floating-drawer">
+        <div class="mock-drawer-top-chrome">
+          <div class="mock-drawer-selector-pill">
+            <div class="mock-drawer-selector-left">
+              <!-- data-icon="message-square" -->
+              <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span>Nexus Chat</span>
+            </div>
+            <!-- data-icon="chevrons-up-down" -->
+            <svg viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+          </div>
+        </div>
+
+        <!-- ==================================================================
+             REDESIGNED NEXUS CHAT SURFACE
+             ================================================================== -->
+        <div class="chat-view-container">
+          <!-- 1. Slim Borderless Utility Strip (No double header chrome!) -->
+          <div class="chat-topbar">
+            <div class="chat-topbar-left">
+              <button class="clickable-icon chat-thread-switcher" aria-label="Conversation history">
+                <!-- data-icon="panel-left" -->
+                <svg viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+                <span class="chat-thread-switcher-label">Agent 模块前置依赖梳理</span>
+                <!-- data-icon="chevron-down" -->
+                <svg class="chat-thread-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+              </button>
+              <button class="clickable-icon chat-rename-button" aria-label="Rename conversation" title="Rename conversation">
+                <!-- data-icon="pencil" -->
+                <svg viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+              </button>
+            </div>
+            <div class="chat-topbar-actions">
+              <button class="clickable-icon" aria-label="Live voice">
+                <!-- data-icon="audio-lines" -->
+                <svg viewBox="0 0 24 24"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
+              </button>
+              <button class="clickable-icon" aria-label="New conversation">
+                <!-- data-icon="square-pen" -->
+                <svg viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
+              </button>
+              <button class="clickable-icon" aria-label="Chat parameters">
+                <!-- data-icon="sliders-horizontal" -->
+                <svg viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. Editorial Message Stream -->
+          <div class="message-display-container">
+            <div class="message-user-row">
+              <div class="message-user-capsule">
+                从 02 的 POMDP 过渡到 03 的 200 行沙箱实战，需要先补强化学习推导吗？
+              </div>
+            </div>
+
+            <div class="message-assistant-turn">
+              <!-- Signature Element: Quiet Inline Trace Spine -->
+              <div class="nexus-trace-spine">
+                <div class="nexus-trace-step is-thinking">
+                  <span class="nexus-trace-dot"></span>
+                  <span>Thought for 3.6s</span>
+                  <span class="nexus-trace-badge">High</span>
+                </div>
+                <div class="nexus-trace-step">
+                  <span class="nexus-trace-dot"></span>
+                  <span>Read <code>00-AIML-学习路径总览.md</code> · 2 linked notes</span>
+                </div>
+              </div>
+
+              <!-- Full-Bleed Editorial Prose (No outer box eating sidebar width) -->
+              <div class="message-assistant-prose">
+                <p>
+                  <strong>不需要先啃完整 RL 推导。</strong>按你当前图谱的依赖设计，模块组一与强化学习主干是解耦的（虚线跨组引用仅出现在后半程）：
+                </p>
+                <ul>
+                  <li>
+                    <span class="nexus-wikilink">02-Agent基础概念</span> 里的 <code>POMDP</code> 只建立<strong>观测受限下的状态信念</strong>直觉，把 <code>(S, A, O)</code> 对应到历史上下文、JSON 工具调用与环境返回即可。
+                  </li>
+                  <li>
+                    进入 <span class="nexus-wikilink">03-Tool-Calling沙箱</span> 真正前置的是 <code>01</code> 的进程隔离（<code>subprocess</code> / 超时回收）与严格 Schema 校验。
+                  </li>
+                </ul>
+                <p>
+                  等你做到模块组二的 <code>GRPO / DeepSeek-R1</code> 时，再回头把轨迹采样映射回策略梯度即可（sample response）。
+                </p>
+              </div>
+
+              <!-- Touch-Safe Turn Actions -->
+              <div class="message-turn-footer">
+                <div class="message-turn-actions">
+                  <button class="clickable-icon" aria-label="Copy response">
+                    <!-- data-icon="copy" -->
+                    <svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                    <span>Copy</span>
+                  </button>
+                  <button class="clickable-icon" aria-label="Regenerate">
+                    <!-- data-icon="rotate-ccw" -->
+                    <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    <span>Retry</span>
+                  </button>
+                </div>
+                <div class="message-branch-pill">
+                  <span>1 / 2</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Unified Composer Dock (Single Cohesive Card) -->
+          <div class="chat-composer-shell">
+            <div class="chat-composer-card">
+              <div class="chat-composer-tray">
+                <div class="chat-context-chip">
+                  <!-- data-icon="file-text" -->
+                  <svg viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                  <span>00-AIML-学习路径总览</span>
+                </div>
+                <div class="chat-context-chip">
+                  <!-- data-icon="folder" -->
+                  <svg viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+                  <span>AIML_Basis</span>
+                </div>
+              </div>
+
+              <div class="chat-textarea" contenteditable="true" data-empty="true" data-placeholder="继续追问，支持 / 工具 · @ 智能体 · [[ 笔记"></div>
+
+              <div class="chat-composer-footer">
+                <div class="chat-composer-tools">
+                  <button class="clickable-icon chat-composer-icon-btn" aria-label="Add context">
+                    <!-- data-icon="plus" -->
+                    <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  </button>
+                  <button class="clickable-icon chat-model-pill" aria-label="Select model and thinking effort">
+                    <span class="chat-model-pill-name">Claude Opus 4.7</span>
+                    <span class="chat-effort-tag">High</span>
+                    <!-- data-icon="chevron-up" -->
+                    <svg width="12" height="12" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg>
+                  </button>
+                  <button class="clickable-icon chat-agent-live-pill" aria-label="Tools, tasks, and subagents">
+                    <!-- data-icon="layers" -->
+                    <svg viewBox="0 0 24 24"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>
+                  </button>
+                </div>
+
+                <div class="chat-composer-meta">
+                  <button class="clickable-icon chat-context-pill" aria-label="Context window 14%, $0.02 — tap to inspect or compact">
+                    <svg class="chat-context-ring" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity="0.22" stroke-width="2.6" fill="none"/>
+                      <path d="M12 3a9 9 0 0 1 7.6 4.2" stroke="var(--text-success)" stroke-width="2.6" fill="none"/>
+                    </svg>
+                    <span>14%</span>
+                  </button>
+                  <button class="clickable-icon chat-send-btn" aria-label="Send message">
+                    <!-- data-icon="arrow-up" -->
+                    <svg viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mock-drawer-bottom-chrome">
+          <div>
+            <div class="mock-drawer-doc-title">00-AIML-学习路径总览</div>
+            <div class="mock-drawer-doc-sub">1 个词, 10 个字符</div>
+          </div>
+          <div class="mock-drawer-bottom-actions">
+            <div class="mock-drawer-circle-btn">
+              <!-- data-icon="pin" -->
+              <svg viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>
+            </div>
+            <div class="mock-drawer-circle-btn is-accent">
+              <!-- data-icon="refresh-cw" -->
+              <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       VIEW 2: 3-Column States Showcase (Ready / Model+Thinking Sheet / Auto-Title+Rename & Light)
+       ======================================================================== -->
+  <section class="mock-states-stage">
+    <div class="mock-states-grid">
+      <!-- COLUMN A: Zero-Friction Ready State (Replaces ugly purple welcome box!) -->
+      <div class="mock-sheet-col">
+        <div class="mock-col-label">
+          <span class="mock-col-title">A · 零门槛就绪态 (Empty State)</span>
+          <span class="mock-col-tag">输入框默认解锁 · 触屏一键触发</span>
+        </div>
+        <aside class="mock-floating-drawer mock-standalone-drawer">
+          <div class="mock-drawer-top-chrome">
+            <div class="mock-drawer-selector-pill">
+              <div class="mock-drawer-selector-left">
+                <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>Nexus Chat</span>
+              </div>
+              <svg viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+            </div>
+          </div>
+
+          <div class="chat-view-container">
+            <div class="chat-topbar">
+              <div class="chat-topbar-left">
+                <button class="clickable-icon chat-thread-switcher" aria-label="Conversation history">
+                  <svg viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+                  <span class="chat-thread-switcher-label">New conversation</span>
+                  <svg class="chat-thread-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <button class="clickable-icon chat-rename-button is-hidden" aria-label="Rename conversation" title="Rename conversation">
+                  <svg viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+                </button>
+              </div>
+              <div class="chat-topbar-actions">
+                <button class="clickable-icon" aria-label="Live voice">
+                  <svg viewBox="0 0 24 24"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
+                </button>
+                <button class="clickable-icon" aria-label="New conversation">
+                  <svg viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
+                </button>
+                <button class="clickable-icon" aria-label="Parameters">
+                  <svg viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="chat-ready-state">
+              <div class="chat-ready-hero">
+                <div class="chat-ready-context-pill">
+                  <span class="chat-ready-dot"></span>
+                  <span>Workspace: AIML_Basis</span>
+                </div>
+                <h2 class="chat-ready-title">有什么想结合笔记探讨的？</h2>
+                <p class="chat-ready-subtitle">直接输入首条消息即可自动建会话，或轻触下方快捷指令：</p>
+
+                <div class="chat-starter-list">
+                  <button class="clickable-icon chat-starter-chip">
+                    <span class="chat-starter-kbd">[[</span>
+                    <span>关联当前笔记《00-AIML-学习路径总览》</span>
+                  </button>
+                  <button class="clickable-icon chat-starter-chip">
+                    <span class="chat-starter-kbd">/</span>
+                    <span>搜索或修改知识库卡片与任务面板</span>
+                  </button>
+                  <button class="clickable-icon chat-starter-chip">
+                    <span class="chat-starter-kbd">@</span>
+                    <span>指定自定义研究 Agent 协作执行</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="chat-recent-section">
+                <div class="chat-recent-heading">Recent in AIML_Basis</div>
+                <div class="chat-recent-item">
+                  <span>DeepSeek-R1 GRPO 奖励函数对比</span>
+                  <span class="chat-recent-time">2h</span>
+                </div>
+                <div class="chat-recent-item">
+                  <span>Missing Semester uv 环境迁移记录</span>
+                  <span class="chat-recent-time">昨天</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="chat-composer-shell">
+              <div class="chat-composer-card">
+                <div class="chat-textarea" contenteditable="true" data-empty="true" data-placeholder="直接输入问题开始新对话…"></div>
+                <div class="chat-composer-footer">
+                  <div class="chat-composer-tools">
+                    <button class="clickable-icon chat-composer-icon-btn"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+                    <button class="clickable-icon chat-model-pill">
+                      <span class="chat-model-pill-name">Claude Opus 4.7</span>
+                      <span class="chat-effort-tag">High</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg>
+                    </button>
+                  </div>
+                  <div class="chat-composer-meta">
+                    <button class="clickable-icon chat-context-pill"><span>0%</span></button>
+                    <button class="clickable-icon chat-send-btn"><svg viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- COLUMN B: Inline Model + Probed Thinking Effort Popover & Expanded Trace -->
+      <div class="mock-sheet-col">
+        <div class="mock-col-label">
+          <span class="mock-col-title">B · 模型与探测 Thinking 档位速选</span>
+          <span class="mock-col-tag">抽屉内锚定浮层 · 思维链展开</span>
+        </div>
+        <aside class="mock-floating-drawer mock-standalone-drawer">
+          <div class="mock-drawer-top-chrome">
+            <div class="mock-drawer-selector-pill">
+              <div class="mock-drawer-selector-left">
+                <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>Nexus Chat</span>
+              </div>
+              <svg viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+            </div>
+          </div>
+
+          <div class="chat-view-container">
+            <div class="chat-topbar">
+              <div class="chat-topbar-left">
+                <button class="clickable-icon chat-thread-switcher" aria-label="Conversation history">
+                  <svg viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+                  <span class="chat-thread-switcher-label">Agent 模块前置依赖梳理</span>
+                  <svg class="chat-thread-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <button class="clickable-icon chat-rename-button" aria-label="Rename conversation" title="Rename conversation">
+                  <svg viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+                </button>
+              </div>
+              <div class="chat-topbar-actions">
+                <button class="clickable-icon" aria-label="Live voice">
+                  <svg viewBox="0 0 24 24"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
+                </button>
+                <button class="clickable-icon" aria-label="New conversation">
+                  <svg viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
+                </button>
+                <button class="clickable-icon" aria-label="Parameters">
+                  <svg viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="message-display-container">
+              <div class="message-assistant-turn">
+                <div class="nexus-trace-spine">
+                  <div class="nexus-trace-step is-thinking">
+                    <span class="nexus-trace-dot"></span>
+                    <span>Thought for 3.6s ▾</span>
+                    <span class="nexus-trace-badge">High</span>
+                  </div>
+                  <div class="nexus-trace-reasoning-body">
+                    检查 <code>00-AIML-学习路径总览.md</code> 依赖边：01→02→03 为实线工程链，RL 主干仅通过跨组虚线在 R1 章节汇合…
+                  </div>
+                  <div class="nexus-trace-step">
+                    <span class="nexus-trace-dot"></span>
+                    <span>Searched 3 notes · 1 subagent idle</span>
+                  </div>
+                </div>
+                <div class="message-assistant-prose">
+                  <p>按依赖图谱，完成 <code>03</code> 只需要工程沙箱与 Schema 校验，无需提前推导策略梯度。</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Anchored Model & Thinking Effort Sheet (Clamped inside drawer!) -->
+            <div class="chat-model-popover">
+              <div class="chat-popover-section-label">
+                <span>Model</span>
+                <span>Updated in this mock</span>
+              </div>
+              <div class="chat-model-option is-selected">
+                <span>Claude Opus 4.7</span>
+                <span class="chat-model-option-sub">Anthropic · 1M</span>
+              </div>
+              <div class="chat-model-option">
+                <span>GPT-5.4</span>
+                <span class="chat-model-option-sub">Responses · 200k</span>
+              </div>
+              <div class="chat-model-option">
+                <span>Gemini 3.1 Pro</span>
+                <span class="chat-model-option-sub">Antigravity · 1M</span>
+              </div>
+
+              <div class="chat-popover-section-label">
+                <span>Thinking effort</span>
+                <span>Probed · Adaptive</span>
+              </div>
+              <div class="chat-effort-segmented">
+                <button class="clickable-icon chat-effort-seg-btn">Off</button>
+                <button class="clickable-icon chat-effort-seg-btn">Low</button>
+                <button class="clickable-icon chat-effort-seg-btn">Med</button>
+                <button class="clickable-icon chat-effort-seg-btn is-active">High</button>
+                <button class="clickable-icon chat-effort-seg-btn">Max</button>
+              </div>
+            </div>
+
+            <div class="chat-composer-shell">
+              <div class="chat-composer-card">
+                <div class="chat-textarea" contenteditable="true" data-empty="true" data-placeholder="继续追问…"></div>
+                <div class="chat-composer-footer">
+                  <div class="chat-composer-tools">
+                    <button class="clickable-icon chat-composer-icon-btn"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+                    <button class="clickable-icon chat-model-pill">
+                      <span class="chat-model-pill-name">Claude Opus 4.7</span>
+                      <span class="chat-effort-tag">High</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                  </div>
+                  <div class="chat-composer-meta">
+                    <button class="clickable-icon chat-context-pill"><span>14% · $0.02</span></button>
+                    <button class="clickable-icon chat-send-btn"><svg viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- COLUMN C: Auto-Titled Session + Topbar Rename + Drawer-Clamped [[ Suggester & Light Theme -->
+      <div class="mock-sheet-col">
+        <div class="mock-col-label">
+          <span class="mock-col-title">C · 自动命名 · 顶栏重命名 &amp; 浅色</span>
+          <span class="mock-col-tag">首条消息自动命名 · ✎ 一键重命名 · [[ 补全</span>
+        </div>
+        <aside class="mock-floating-drawer mock-standalone-drawer mock-light-scope">
+          <div class="mock-drawer-top-chrome">
+            <div class="mock-drawer-selector-pill">
+              <div class="mock-drawer-selector-left">
+                <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>Nexus Chat</span>
+              </div>
+              <svg viewBox="0 0 24 24"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+            </div>
+          </div>
+
+          <div class="chat-view-container">
+            <div class="chat-topbar">
+              <div class="chat-topbar-left">
+                <button class="clickable-icon chat-thread-switcher" aria-label="Conversation history">
+                  <svg viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+                  <span class="chat-thread-switcher-label">对比 02 和 03 的核心代码结构</span>
+                  <svg class="chat-thread-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+                </button>
+                <button class="clickable-icon chat-rename-button is-showcase" aria-label="Rename conversation" title="Rename conversation">
+                  <svg viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>
+                </button>
+              </div>
+              <div class="chat-topbar-actions">
+                <button class="clickable-icon" aria-label="Live voice">
+                  <svg viewBox="0 0 24 24"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></svg>
+                </button>
+                <button class="clickable-icon" aria-label="New conversation">
+                  <svg viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>
+                </button>
+                <button class="clickable-icon" aria-label="Parameters">
+                  <svg viewBox="0 0 24 24"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Messages STAY VISIBLE on iPad and desktop sidebars -->
+            <div class="message-display-container">
+              <div class="message-user-row">
+                <div class="message-user-capsule">对比 02 和 03 的核心代码结构</div>
+              </div>
+              <div class="message-assistant-turn">
+                <div class="message-assistant-prose">
+                  <p><code>02</code> 侧重状态循环与观测边界抽象，而 <code>03</code> 直接给出单文件 <code>run_agent()</code> 工具调用沙箱执行器。</p>
+                  <p>你可以从 <code>03</code> 的沙箱循环反向对照 <code>02</code> 中的状态转移定义，两份讲义里的代码片段一一对应。</p>
+                </div>
+                <div class="message-turn-footer">
+                  <div class="message-turn-actions">
+                    <button class="clickable-icon" aria-label="Copy response">
+                      <svg viewBox="0 0 24 24"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                      <span>Copy</span>
+                    </button>
+                    <button class="clickable-icon" aria-label="Regenerate">
+                      <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                      <span>Retry</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Inline [[ Suggester Clamped cleanly above composer inside drawer -->
+            <div class="chat-inline-suggester">
+              <div class="chat-suggest-item is-active">
+                <span>03-自己写一个简单Agent.md</span>
+                <span class="chat-model-option-sub">AIML_Basis</span>
+              </div>
+              <div class="chat-suggest-item">
+                <span>02-Agent基础概念.md</span>
+                <span class="chat-model-option-sub">AIML_Basis</span>
+              </div>
+              <div class="chat-suggest-item">
+                <span>00-AIML-学习路径总览.md</span>
+                <span class="chat-model-option-sub">AIML_Basis</span>
+              </div>
+            </div>
+
+            <div class="chat-composer-shell">
+              <div class="chat-composer-card">
+                <div class="chat-textarea" contenteditable="true" data-empty="false">对比 [[03 里的 tool-calling 循环</div>
+                <div class="chat-composer-footer">
+                  <div class="chat-composer-tools">
+                    <button class="clickable-icon chat-composer-icon-btn" aria-label="Reference note"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+                    <button class="clickable-icon chat-model-pill" aria-label="Select model and thinking effort">
+                      <span class="chat-model-pill-name">GPT-5.4</span>
+                      <span class="chat-effort-tag">xHigh</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg>
+                    </button>
+                  </div>
+                  <div class="chat-composer-meta">
+                    <button class="clickable-icon chat-context-pill"><span>19%</span></button>
+                    <button class="clickable-icon chat-send-btn" aria-label="Send message"><svg viewBox="0 0 24 24"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <script src="ipad-chat-redesign.js"></script>
+</body>
+</html>

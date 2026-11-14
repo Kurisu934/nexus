@@ -92,7 +92,7 @@ describe('ToolStatusBar — construction', () => {
     // Row 2 should have 4 button + 1 cost div
     const row2El = (statusBarEl.createEl as jest.Mock).mock.results.find(
       (r) => ((r.value as { createEl?: jest.Mock }).createEl as jest.Mock)?.mock?.calls?.some(
-        (c) => (c[1] as { cls?: string })?.cls === 'tool-status-inspect-icon'
+        (c) => (c[1] as { cls?: string })?.cls === 'tool-status-inspect-icon clickable-icon'
       )
     )?.value as HTMLElement | undefined;
 
@@ -102,16 +102,16 @@ describe('ToolStatusBar — construction', () => {
     const row2Classes = row2Calls.map((call) => (call[1] as { cls?: string })?.cls);
     // The four meta buttons
     expect(row2Classes).toEqual(expect.arrayContaining([
-      'tool-status-inspect-icon',
-      'tool-status-task-icon',
+      'tool-status-inspect-icon clickable-icon',
+      'tool-status-task-icon clickable-icon',
       'tool-status-agent-slot',
-      'tool-status-compact-icon',
+      'tool-status-compact-icon clickable-icon',
       'tool-status-cost',
     ]));
     const agentSlotResult = row2Calls.find((call) => (call[1] as { cls?: string })?.cls === 'tool-status-agent-slot');
     const agentSlotIndex = row2Calls.indexOf(agentSlotResult!);
     const agentSlotEl = (row2El!.createEl as jest.Mock).mock.results[agentSlotIndex].value as HTMLElement;
-    expect(agentSlotEl.createEl).toHaveBeenCalledWith('button', { cls: 'tool-status-agent-icon' });
+    expect(agentSlotEl.createEl).toHaveBeenCalledWith('button', { cls: 'tool-status-agent-icon clickable-icon' });
   });
 
   it('registers click handlers for inspect/task/agent/compact when callbacks are provided', () => {
@@ -165,7 +165,7 @@ describe('ToolStatusBar — accessors', () => {
 
     const slot = bar.getAgentSlotEl();
     expect(slot).toBeDefined();
-    expect(slot.createEl).toHaveBeenCalledWith('button', { cls: 'tool-status-agent-icon' });
+    expect(slot.createEl).toHaveBeenCalledWith('button', { cls: 'tool-status-agent-icon clickable-icon' });
   });
 
   it('getContextBadge returns a defined ContextBadge instance', () => {
