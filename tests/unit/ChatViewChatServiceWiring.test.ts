@@ -147,4 +147,35 @@ describe('ChatView chatService wiring across the reload window', () => {
     expect(warnings.some(w => w.includes('chatService not available'))).toBe(true);
     expect(subagentControllerInitializeCalls).toHaveLength(0);
   });
+
+  it('constructs streamingController in initializeControllers and tracks active streaming message state', async () => {
+    const { view } = await buildHarness();
+    view.streamingController = undefined;
+    const contentEl = {
+      getAttribute: () => null,
+      parentElement: null,
+      children: [],
+      classList: { remove: jest.fn() },
+      querySelector: jest.fn(() => null),
+      createDiv: jest.fn(),
+      appendChild: jest.fn(),
+      empty: jest.fn(),
+    };
+    const messageEl = {
+      querySelector: jest.fn((sel: string) => (sel === '.message-bubble .message-content' ? contentEl : null)),
+    };
+    view.containerEl = {
+      querySelector: jest.fn((sel: string) => (sel === '[data-message-id="msg-1"]' ? messageEl : null)),
+      querySelectorAll: jest.fn(() => []),
+    };
+    view.messageDisplay = { followNewOutput: jest.fn(), updateMessageContent: jest.fn() };
+    view.toolEventCoordinator = { clearToolNameCache: jest.fn() };
+
+    view.initializeControllers();
+    view.handleStreamingUpdate('msg-1', 'Hello', false, true);
+
+    expect(view.streamingController.getCurrentMessageId()).toBe('msg-1');
+    expect(contentEl.appendChild).toHaveBeenCalledWith(expect.objectContaining({ className: 'message-turn-text' }));
+    expect(view.messageDisplay.followNewOutput).toHaveBeenCalledTimes(1);
+  });
 });

@@ -656,6 +656,7 @@ export class ChatView extends ItemView {
     this.uiStateController.setStarterTriggerCallback((trigger) => {
       this.chatInput?.insertTrigger(trigger);
     });
+    this.streamingController = new StreamingController(this.containerEl, this.app, this);
     this.nexusLoadingController = new NexusLoadingController(this.containerEl);
   }
 

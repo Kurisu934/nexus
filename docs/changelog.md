@@ -2,6 +2,12 @@
 
 ## November 2026
 
+**v5.25.1** — Fix streaming response crash in newly opened chat views
+
+- Restore `StreamingController` initialization in `ChatView.initializeControllers()` so streaming chunks no longer fail with `undefined is not an object (evaluating 'this.streamingController.updateStreamingChunk')` on iPadOS, iOS, and desktop.
+
+---
+
 **v5.25.0** — Native editorial chat UI redesign, iPadOS/iOS adaptation, and automatic conversation naming
 
 - Redesign the chat panel to blend natively with Obsidian's dark and light surfaces (`--glass-backdrop` neon glow removed, slim borderless thread switcher bar, unboxed full-width assistant prose, inline reasoning/tool trace spine, and a single unified composer dock with an inline **Model & Thinking effort** quick-picker popover).
