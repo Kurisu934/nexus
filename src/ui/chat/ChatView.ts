@@ -38,6 +38,7 @@ import { NexusLoadingController } from './controllers/NexusLoadingController';
 import { SubagentController } from './controllers/SubagentController';
 import { ChatLiveVoiceController } from './controllers/ChatLiveVoiceController';
 import { LiveVoiceContextBuilder } from '../../services/realtimeVoice/LiveVoiceContextBuilder';
+import { ActiveEditorContextController } from './controllers/ActiveEditorContextController';
 
 // Coordinators
 import { ToolStatusBar } from './components/ToolStatusBar';
@@ -98,6 +99,7 @@ export class ChatView extends ItemView {
   private streamingController!: StreamingController;
   private nexusLoadingController!: NexusLoadingController;
   private liveVoiceController: ChatLiveVoiceController | null = null;
+  private activeEditorContextController: ActiveEditorContextController | null = null;
   private toolCallStateManager!: ToolCallStateManager;
   private toolEventCoordinator!: ToolEventCoordinator;
   private toolStatusBar!: ToolStatusBar;
@@ -170,6 +172,9 @@ export class ChatView extends ItemView {
         getNexusPlugin<NexusPlugin>(this.app)?.getServiceIfReady<HybridStorageAdapter>('hybridStorageAdapter') ?? null,
       onUpdateContextProgress: () => {
         void this.updateContextProgress();
+      },
+      onAfterMessageSent: () => {
+        this.activeEditorContextController?.consumeSelectionAfterSend();
       },
     });
     this.subagentIntegration = new ChatSubagentIntegration({
@@ -758,7 +763,10 @@ export class ChatView extends ItemView {
 
     this.chatInput = new ChatInput(
       this.layoutElements.inputContainer,
-      (message, enhancement, metadata) => this.sendCoordinator.handleSendMessage(message, enhancement, metadata),
+      (message, enhancement, metadata) => {
+        this.activeEditorContextController?.captureNow();
+        return this.sendCoordinator.handleSendMessage(message, enhancement, metadata);
+      },
       () => this.messageManager.getIsLoading(),
       this.app,
       () => {
@@ -789,6 +797,26 @@ export class ChatView extends ItemView {
       this.modelPopover?.toggle(anchorEl);
     });
     this.refreshModelPill();
+    this.activeEditorContextController = new ActiveEditorContextController({
+      app: this.app,
+      chatContainerEl: this.getChatContainer() ?? this.containerEl,
+      component: this,
+      onChange: (state) => {
+        this.chatInput?.updateContextTray(state);
+        void this.updateContextProgress();
+      },
+      onFocusComposer: () => {
+        this.chatInput?.focusInput(true);
+      }
+    });
+    this.modelAgentManager.setEditorContextProvider(
+      () => this.activeEditorContextController?.getPromptContext() ?? null
+    );
+    this.chatInput.setContextTrayCallbacks({
+      onToggleActiveNote: () => this.activeEditorContextController?.toggleIncludeActiveNote(),
+      onDismissSelection: () => this.activeEditorContextController?.dismissSelection()
+    });
+    this.chatInput.updateContextTray(this.activeEditorContextController.getState());
     this.liveVoiceController = new ChatLiveVoiceController({
       app: this.app,
       chatInput: this.chatInput,
@@ -1367,6 +1395,9 @@ export class ChatView extends ItemView {
       window.clearTimeout(this.searchDebounceTimer);
       this.searchDebounceTimer = null;
     }
+    this.modelAgentManager?.setEditorContextProvider(null);
+    this.activeEditorContextController?.cleanup();
+    this.activeEditorContextController = null;
     this.conversationList?.cleanup();
     this.messageDisplay?.cleanup();
     this.liveVoiceController?.cleanup();

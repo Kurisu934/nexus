@@ -14,11 +14,19 @@ import { isMobile } from '../../../utils/platform';
 import { ChatVoiceInputController, ChatVoiceInputState } from '../controllers/ChatVoiceInputController';
 import type { LiveVoiceComposerState } from '../types/LiveVoiceTypes';
 import type { LLMProviderSettings } from '../../../types/llm/ProviderTypes';
+import type { ActiveEditorContextState } from '../controllers/ActiveEditorContextController';
+
+export interface ComposerContextTrayCallbacks {
+  onToggleActiveNote: () => void;
+  onDismissSelection: () => void;
+}
 
 export class ChatInput {
   private element: HTMLElement | null = null;
   private inputElement: HTMLElement | null = null;
   private inputWrapper: HTMLElement | null = null;
+  private contextTrayEl: HTMLElement | null = null;
+  private contextTrayCallbacks: ComposerContextTrayCallbacks | null = null;
   private voiceVisualElement: HTMLElement | null = null;
   private liveVoiceComposerElement: HTMLElement | null = null;
   private liveVoiceWaveformElement: HTMLElement | null = null;
@@ -104,6 +112,24 @@ export class ChatInput {
     if (isMobile()) {
       this.inputWrapper.addClass('chat-input-mobile');
     }
+
+    this.contextTrayEl = this.inputWrapper.createDiv('chat-composer-tray is-hidden');
+    component?.registerDomEvent(this.contextTrayEl, 'click', (event: MouseEvent) => {
+      const target = event.target;
+      if (!this.isElement(target)) {
+        return;
+      }
+      const actionEl = target.closest('[data-tray-action]');
+      if (!actionEl || !this.contextTrayEl?.contains(actionEl)) {
+        return;
+      }
+      const action = actionEl.getAttribute('data-tray-action');
+      if (action === 'toggle-note') {
+        this.contextTrayCallbacks?.onToggleActiveNote();
+      } else if (action === 'dismiss-selection') {
+        this.contextTrayCallbacks?.onDismissSelection();
+      }
+    });
 
     // Composer body: textarea and voice visual overlays
     const composerBody = this.inputWrapper.createDiv('chat-composer-body');
@@ -548,6 +574,87 @@ export class ChatInput {
     }
   }
 
+  setContextTrayCallbacks(callbacks: ComposerContextTrayCallbacks): void {
+    this.contextTrayCallbacks = callbacks;
+  }
+
+  updateContextTray(state: ActiveEditorContextState): void {
+    if (!this.contextTrayEl) {
+      return;
+    }
+
+    this.contextTrayEl.empty();
+    const hasItems = Boolean(state.activeNote || state.selection);
+    this.contextTrayEl.toggleClass('is-hidden', !hasItems);
+    if (!hasItems) {
+      return;
+    }
+
+    if (state.activeNote) {
+      const labelText = state.includeActiveNote
+        ? `Current note attached: ${state.activeNote.path} — tap to exclude`
+        : `Current note excluded: ${state.activeNote.path} — tap to attach`;
+      const chipEl = this.contextTrayEl.createEl('button', {
+        cls: state.includeActiveNote
+          ? 'clickable-icon chat-context-chip'
+          : 'clickable-icon chat-context-chip is-muted',
+        attr: {
+          type: 'button',
+          'data-tray-action': 'toggle-note',
+          'aria-pressed': String(state.includeActiveNote),
+          'aria-label': labelText,
+          title: labelText
+        }
+      });
+      const iconEl = chipEl.createSpan({
+        cls: 'chat-context-chip-icon',
+        attr: { 'aria-hidden': 'true' }
+      });
+      setIcon(iconEl, 'file-text');
+      chipEl.createSpan({
+        cls: 'chat-context-chip-label',
+        text: state.activeNote.basename
+      });
+      const actionEl = chipEl.createSpan({
+        cls: 'chat-context-chip-action',
+        attr: { 'aria-hidden': 'true' }
+      });
+      setIcon(actionEl, state.includeActiveNote ? 'x' : 'plus');
+    }
+
+    if (state.selection) {
+      const { selection } = state;
+      const range = selection.startLine
+        ? selection.endLine && selection.endLine !== selection.startLine
+          ? `L${selection.startLine}–${selection.endLine}`
+          : `L${selection.startLine}`
+        : `${selection.selectedText.length} chars`;
+      const chipEl = this.contextTrayEl.createEl('button', {
+        cls: 'clickable-icon chat-context-chip chat-selection-chip',
+        attr: {
+          type: 'button',
+          'data-tray-action': 'dismiss-selection',
+          'aria-label': 'Remove selected text from context',
+          title: `Selected from ${selection.filePath} (${range}) — tap to remove`
+        }
+      });
+      const iconEl = chipEl.createSpan({
+        cls: 'chat-context-chip-icon',
+        attr: { 'aria-hidden': 'true' }
+      });
+      setIcon(iconEl, 'quote');
+      chipEl.createSpan({
+        cls: 'chat-context-chip-label',
+        text: `${selection.fileName} · ${range}`
+      });
+      const actionEl = chipEl.createSpan({
+        cls: 'chat-context-chip-action',
+        attr: { 'aria-hidden': 'true' }
+      });
+      setIcon(actionEl, 'x');
+    }
+  }
+
   insertTrigger(trigger: string): void {
     if (!this.inputElement || this.inputElement.contentEditable !== 'true') {
       return;
@@ -654,6 +761,8 @@ export class ChatInput {
     this.element = null;
     this.inputElement = null;
     this.inputWrapper = null;
+    this.contextTrayEl = null;
+    this.contextTrayCallbacks = null;
     this.voiceVisualElement = null;
     this.liveVoiceComposerElement = null;
     this.liveVoiceWaveformElement = null;
@@ -814,5 +923,9 @@ export class ChatInput {
       const phaseIndex = index % 12;
       this.liveVoiceWaveformElement.createSpan(`chat-live-wave-bar chat-live-wave-phase-${phaseIndex}`);
     }
+  }
+
+  private isElement(value: EventTarget | null): value is Element {
+    return typeof value === 'object' && value !== null && 'closest' in value && typeof value.closest === 'function';
   }
 }

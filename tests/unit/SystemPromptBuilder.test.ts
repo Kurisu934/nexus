@@ -1,4 +1,7 @@
+import { App } from 'obsidian';
 import { SystemPromptBuilder } from '../../src/ui/chat/services/SystemPromptBuilder';
+import { ModelAgentPromptContextAssembler } from '../../src/ui/chat/services/ModelAgentPromptContextAssembler';
+import { ModelAgentManager } from '../../src/ui/chat/services/ModelAgentManager';
 
 describe('SystemPromptBuilder compaction projection', () => {
   it('renders a deterministic bounded frontier block', async () => {
@@ -278,5 +281,215 @@ describe('SystemPromptBuilder', () => {
     expect(prompt).toContain('<workspace name="Workspace &lt;Ref&gt;" id="ws-ref-1">');
     expect(prompt).toContain('"name": "Workspace &lt;Ref&gt;"');
     expect(prompt).toContain('"taskSummary"');
+  });
+});
+
+describe('SystemPromptBuilder active editor context', () => {
+  it('injects active_note and selected_text with escaped XML right after files', async () => {
+    const readNoteContent = jest.fn(async (path: string) => {
+      if (path === 'Notes/Ctx.md') return 'Context file body';
+      if (path === 'Notes/Open <Note>.md') return 'Active <note> body & more';
+      return '';
+    });
+    const builder = new SystemPromptBuilder(readNoteContent);
+
+    const prompt = await builder.build({
+      sessionId: 'session-1',
+      workspaceId: 'ws-1',
+      contextNotes: ['Notes/Ctx.md'],
+      customPrompt: 'Be concise',
+      editorContext: {
+        activeNotePath: 'Notes/Open <Note>.md',
+        selection: {
+          filePath: 'Notes/Open <Note>.md',
+          fileName: 'Open <Note>',
+          selectedText: 'const x = a < b && c > d;',
+          startLine: 12,
+          endLine: 18
+        }
+      }
+    });
+
+    expect(prompt).not.toBeNull();
+    expect(prompt).toContain('<active_editor_context>');
+    expect(prompt).toContain('<active_note path="Notes/Open &lt;Note&gt;.md">\nActive &lt;note&gt; body &amp; more\n</active_note>');
+    expect(prompt).toContain('<selected_text path="Notes/Open &lt;Note&gt;.md" lines="12-18">\nconst x = a &lt; b &amp;&amp; c &gt; d;\n</selected_text>');
+    expect(prompt).toContain('</active_editor_context>');
+
+    const filesEnd = prompt!.indexOf('</files>');
+    const editorStart = prompt!.indexOf('<active_editor_context>');
+    const editorEnd = prompt!.indexOf('</active_editor_context>');
+    const selectedPromptStart = prompt!.indexOf('<selected_prompt>');
+    expect(filesEnd).toBeGreaterThan(-1);
+    expect(editorStart).toBeGreaterThan(filesEnd);
+    expect(editorEnd).toBeLessThan(selectedPromptStart);
+  });
+
+  it('formats single-line selection and omits lines attribute when line numbers are absent', async () => {
+    const builder = new SystemPromptBuilder(async () => 'Body');
+
+    const singleLinePrompt = await builder.build({
+      editorContext: {
+        selection: {
+          filePath: 'Notes/A.md',
+          fileName: 'A',
+          selectedText: 'single line',
+          startLine: 7,
+          endLine: 7
+        }
+      }
+    });
+    expect(singleLinePrompt).toContain('<selected_text path="Notes/A.md" lines="7">\nsingle line\n</selected_text>');
+
+    const readingViewPrompt = await builder.build({
+      editorContext: {
+        selection: {
+          filePath: 'Notes/A.md',
+          fileName: 'A',
+          selectedText: 'reading view snippet'
+        }
+      }
+    });
+    expect(readingViewPrompt).toContain('<selected_text path="Notes/A.md">\nreading view snippet\n</selected_text>');
+    expect(readingViewPrompt).not.toContain('lines=');
+  });
+
+  it('deduplicates active_note when already included via contextNotes or messageEnhancement.notes', async () => {
+    const readNoteContent = jest.fn(async () => 'Full file body');
+    const builder = new SystemPromptBuilder(readNoteContent);
+
+    const viaContextNotes = await builder.build({
+      contextNotes: ['Notes/Dup.md'],
+      editorContext: {
+        activeNotePath: 'Notes/Dup.md',
+        selection: null
+      }
+    });
+
+    expect(readNoteContent).toHaveBeenCalledTimes(1);
+    expect(viaContextNotes).toContain('<active_note path="Notes/Dup.md" included_in_files="true" />');
+    expect(viaContextNotes).not.toContain('<active_note path="Notes/Dup.md">\n');
+
+    readNoteContent.mockClear();
+
+    const viaEnhancement = await builder.build({
+      messageEnhancement: {
+        originalMessage: 'hi',
+        cleanedMessage: 'hi',
+        totalTokens: 5,
+        tools: [],
+        prompts: [],
+        workspaces: [],
+        notes: [
+          {
+            path: 'Notes/Mentioned.md',
+            name: 'Mentioned',
+            content: 'Mentioned body',
+            tokens: 4
+          }
+        ]
+      },
+      editorContext: {
+        activeNotePath: 'Notes/Mentioned.md',
+        selection: {
+          filePath: 'Notes/Mentioned.md',
+          fileName: 'Mentioned',
+          selectedText: 'excerpt',
+          startLine: 2,
+          endLine: 3
+        }
+      }
+    });
+
+    expect(readNoteContent).not.toHaveBeenCalled();
+    expect(viaEnhancement).toContain('<active_note path="Notes/Mentioned.md" included_in_files="true" />');
+    expect(viaEnhancement).toContain('<selected_text path="Notes/Mentioned.md" lines="2-3">\nexcerpt\n</selected_text>');
+  });
+
+  it('omits active_editor_context completely when editorContext is empty or null', async () => {
+    const readNoteContent = jest.fn(async () => 'Should not be read');
+    const builder = new SystemPromptBuilder(readNoteContent);
+    const baseOptions = { sessionId: 's1', workspaceId: 'w1' };
+
+    const baseline = await builder.build(baseOptions);
+    const withNull = await builder.build({ ...baseOptions, editorContext: null });
+    const withEmpty = await builder.build({
+      ...baseOptions,
+      editorContext: {
+        activeNotePath: '   ',
+        selection: {
+          filePath: 'Notes/A.md',
+          fileName: 'A',
+          selectedText: '   \n  '
+        }
+      }
+    });
+
+    expect(readNoteContent).not.toHaveBeenCalled();
+    expect(withNull).toBe(baseline);
+    expect(withEmpty).toBe(baseline);
+    expect(withNull).not.toContain('<active_editor_context>');
+  });
+
+  it('forwards editorContext in ModelAgentPromptContextAssembler and suppresses it in getHandoffSystemPrompt', async () => {
+    const build = jest.fn(async () => 'built-prompt');
+    const assembler = new ModelAgentPromptContextAssembler({
+      systemPromptBuilder: { build },
+      getSessionId: async () => 'session-1'
+    });
+
+    const editorContext = {
+      activeNotePath: 'Notes/Open.md',
+      selection: {
+        filePath: 'Notes/Open.md',
+        fileName: 'Open',
+        selectedText: 'selected snippet',
+        startLine: 3,
+        endLine: 4
+      }
+    };
+
+    await assembler.buildSystemPrompt({
+      selectedModel: null,
+      selectedWorkspaceId: null,
+      workspaceContext: null,
+      loadedWorkspaceData: null,
+      contextNotes: [],
+      messageEnhancement: null,
+      currentSystemPrompt: null,
+      thinkingSettings: { enabled: false, effort: 'medium' },
+      webSearch: false,
+      temperature: 0.5,
+      imageProvider: 'google',
+      imageModel: 'imagen',
+      transcriptionProvider: null,
+      transcriptionModel: null,
+      contextTokenTracker: null,
+      compactionFrontier: [],
+      latestCompactionRecord: null,
+      editorContext
+    });
+
+    expect(build).toHaveBeenCalledWith(expect.objectContaining({ editorContext }));
+
+    const manager = new ModelAgentManager(
+      new App(),
+      {
+        onModelChanged: jest.fn(),
+        onPromptChanged: jest.fn(),
+        onSystemPromptChanged: jest.fn()
+      }
+    );
+    const assemblerSpy = jest.fn(async () => 'prompt');
+    (manager as unknown as { promptContextAssembler: { buildSystemPrompt: jest.Mock } }).promptContextAssembler = {
+      buildSystemPrompt: assemblerSpy
+    };
+
+    manager.setEditorContextProvider(() => editorContext);
+    await manager.getCurrentSystemPrompt();
+    expect(assemblerSpy).toHaveBeenLastCalledWith(expect.objectContaining({ editorContext }));
+
+    await manager.getHandoffSystemPrompt();
+    expect(assemblerSpy).toHaveBeenLastCalledWith(expect.objectContaining({ editorContext: null }));
   });
 });

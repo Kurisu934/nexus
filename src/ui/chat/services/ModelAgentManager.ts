@@ -8,7 +8,7 @@ import { generateSessionId } from '../../../utils/sessionUtils';
 import { ModelOption, PromptOption } from '../types/SelectionTypes';
 import { WorkspaceContext } from '../../../database/types/workspace/WorkspaceTypes';
 import { MessageEnhancement } from '../components/suggesters/base/SuggesterInterfaces';
-import { SystemPromptBuilder } from './SystemPromptBuilder';
+import { SystemPromptBuilder, type ActiveEditorPromptContext } from './SystemPromptBuilder';
 import { getNexusPlugin } from '../../../utils/pluginLocator';
 import type { AgentManager } from '../../../services/AgentManager';
 import type { IAgent } from '../../../agents/interfaces/IAgent';
@@ -145,6 +145,7 @@ export class ModelAgentManager {
   private compactionFrontierService = new CompactionFrontierService();
   // Settings saved with no conversation open, held for the next new conversation.
   private carriedSelections: { contextWindow: number | null } | null = null;
+  private editorContextProvider: (() => ActiveEditorPromptContext | null) | null = null;
 
   constructor(
     private app: App, // Obsidian App
@@ -203,6 +204,10 @@ export class ModelAgentManager {
         return await plugin?.getService?.<import('../../../services/instructions/types').ToolCatalogPort>('toolCatalogService') ?? null;
       },
     });
+  }
+
+  setEditorContextProvider(provider: (() => ActiveEditorPromptContext | null) | null): void {
+    this.editorContextProvider = provider;
   }
 
   /**
@@ -697,7 +702,8 @@ export class ModelAgentManager {
       compactionToolSelectors: toolSelectors ?? snapshot.compactionFrontier.flatMap(record => record.toolSelectors ?? []),
       contextTokenTracker: null,
       compactionFrontier: [],
-      latestCompactionRecord: null
+      latestCompactionRecord: null,
+      editorContext: null
     });
   }
 
@@ -1428,7 +1434,8 @@ export class ModelAgentManager {
       contextTokenTracker: this.compactionState.getContextTokenTracker(),
       compactionFrontier: this.compactionState.getCompactionFrontier(),
       latestCompactionRecord: this.compactionState.getLatestCompactionRecord(),
-      effectiveContextWindow: this.getEffectiveContextWindow()
+      effectiveContextWindow: this.getEffectiveContextWindow(),
+      editorContext: this.editorContextProvider?.() ?? null
     };
   }
 

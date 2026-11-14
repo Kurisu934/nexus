@@ -236,6 +236,7 @@ function createHarness(provider = 'github-copilot', preservation: ContextPreserv
   };
 
   const onUpdateContextProgress = jest.fn();
+  const onAfterMessageSent = jest.fn();
   const getStorageAdapter = jest.fn<unknown, []>().mockReturnValue(null);
 
   const coordinator = new ChatSendCoordinator({
@@ -251,6 +252,7 @@ function createHarness(provider = 'github-copilot', preservation: ContextPreserv
     getPreservationService: () => preservation,
     getStorageAdapter: () => getStorageAdapter() as never,
     onUpdateContextProgress,
+    onAfterMessageSent,
     compactionService: realCompaction ? new ContextCompactionService() : compactionService
   });
 
@@ -269,6 +271,7 @@ function createHarness(provider = 'github-copilot', preservation: ContextPreserv
     updateConversation,
     compactionService,
     onUpdateContextProgress,
+    onAfterMessageSent,
     bubble
   };
 }
@@ -694,5 +697,46 @@ describe('ChatSendCoordinator auto-create and auto-title', () => {
 
     expect(sent).toBe(true);
     expect(autoTitleConversationFromFirstMessage).not.toHaveBeenCalled();
+  });
+
+  it('invokes onAfterMessageSent when a user message sends successfully', async () => {
+    const harness = createHarness();
+
+    const sent = await harness.coordinator.handleSendMessage('Summarize this selection');
+
+    expect(sent).toBe(true);
+    expect(harness.onAfterMessageSent).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not invoke onAfterMessageSent when sending fails or is rejected', async () => {
+    const failedSendHarness = createHarness();
+    failedSendHarness.messageManager.sendMessage.mockRejectedValueOnce(new Error('network timeout'));
+    await expect(failedSendHarness.coordinator.handleSendMessage('hello')).rejects.toThrow('network timeout');
+    expect(failedSendHarness.onAfterMessageSent).not.toHaveBeenCalled();
+
+    const budgetRejectedHarness = createHarness();
+    budgetRejectedHarness.modelAgentManager.shouldCompactBeforeSending
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(true);
+    expect(await budgetRejectedHarness.coordinator.handleSendMessage('too large')).toBe(false);
+    expect(budgetRejectedHarness.onAfterMessageSent).not.toHaveBeenCalled();
+
+    const missingConversationHarness = createHarness();
+    missingConversationHarness.conversationManager.getCurrentConversation.mockReturnValue(null);
+    expect(await missingConversationHarness.coordinator.handleSendMessage('no chat')).toBe(false);
+    expect(missingConversationHarness.onAfterMessageSent).not.toHaveBeenCalled();
+  });
+
+  it('does not invoke onAfterMessageSent for hidden compaction resume messages', async () => {
+    const harness = createHarness();
+
+    const sent = await harness.coordinator.handleSendMessage(
+      'Continue where you left off',
+      undefined,
+      { hidden: true } as never
+    );
+
+    expect(sent).toBe(true);
+    expect(harness.onAfterMessageSent).not.toHaveBeenCalled();
   });
 });

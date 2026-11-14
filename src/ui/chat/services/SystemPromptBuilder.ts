@@ -105,6 +105,19 @@ export interface RemoteAgentPromptInfo {
   description?: string;
 }
 
+export interface CapturedSelectionInfo {
+  filePath: string;
+  fileName: string;
+  selectedText: string;
+  startLine?: number;
+  endLine?: number;
+}
+
+export interface ActiveEditorPromptContext {
+  activeNotePath?: string | null;
+  selection?: CapturedSelectionInfo | null;
+}
+
 export interface SystemPromptOptions {
   remoteAgents?: RemoteAgentPromptInfo[];
   sessionId?: string;
@@ -133,6 +146,8 @@ export interface SystemPromptOptions {
   legacyCompactionRecord?: CompactedContext | null;
   // Legacy alias retained for compatibility with older tests/call sites.
   previousContext?: CompactedContext | null;
+  // Active Obsidian note and/or captured text selection
+  editorContext?: ActiveEditorPromptContext | null;
 }
 
 export class SystemPromptBuilder {
@@ -206,6 +221,16 @@ export class SystemPromptBuilder {
     );
     if (filesSection) {
       sections.push(filesSection);
+    }
+
+    // 3.5. Active editor context (current note & optional text selection)
+    const activeEditorContextSection = await this.buildActiveEditorContextSection(
+      options.editorContext,
+      options.contextNotes || [],
+      options.messageEnhancement
+    );
+    if (activeEditorContextSection) {
+      sections.push(activeEditorContextSection);
     }
 
     // 4. Tool hints from /suggester
@@ -463,6 +488,61 @@ Start with the entrypoint and load deeper guide files selectively.
 
     prompt += '</files>';
 
+    return prompt;
+  }
+
+  /**
+   * Build active editor context section (active note and/or captured selection)
+   */
+  private async buildActiveEditorContextSection(
+    editorContext: ActiveEditorPromptContext | null | undefined,
+    contextNotes: string[],
+    messageEnhancement?: MessageEnhancement | null
+  ): Promise<string | null> {
+    if (!editorContext) {
+      return null;
+    }
+
+    const activeNotePath = typeof editorContext.activeNotePath === 'string' && editorContext.activeNotePath.trim().length > 0
+      ? editorContext.activeNotePath
+      : null;
+    const rawSelection = editorContext.selection;
+    const selection = rawSelection && typeof rawSelection.selectedText === 'string' && rawSelection.selectedText.trim().length > 0
+      ? rawSelection
+      : null;
+
+    if (!activeNotePath && !selection) {
+      return null;
+    }
+
+    let prompt = '<active_editor_context>\n';
+
+    if (activeNotePath) {
+      const alreadyIncludedInFiles = contextNotes.includes(activeNotePath)
+        || Boolean(messageEnhancement?.notes?.some(note => note.path === activeNotePath));
+
+      if (alreadyIncludedInFiles) {
+        prompt += `<active_note path="${this.escapeXmlAttribute(activeNotePath)}" included_in_files="true" />\n`;
+      } else {
+        const content = await this.readNoteContent(activeNotePath);
+        prompt += `<active_note path="${this.escapeXmlAttribute(activeNotePath)}">\n`;
+        prompt += this.escapeXmlContent(content || '[File content unavailable]');
+        prompt += '\n</active_note>\n';
+      }
+    }
+
+    if (selection) {
+      const linesAttr = typeof selection.startLine === 'number' && selection.startLine > 0
+        ? (typeof selection.endLine === 'number' && selection.endLine !== selection.startLine
+          ? ` lines="${selection.startLine}-${selection.endLine}"`
+          : ` lines="${selection.startLine}"`)
+        : '';
+      prompt += `<selected_text path="${this.escapeXmlAttribute(selection.filePath)}"${linesAttr}>\n`;
+      prompt += this.escapeXmlContent(selection.selectedText);
+      prompt += '\n</selected_text>\n';
+    }
+
+    prompt += '</active_editor_context>';
     return prompt;
   }
 

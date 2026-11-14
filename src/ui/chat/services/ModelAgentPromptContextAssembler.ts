@@ -16,6 +16,7 @@ import type {
   ToolCatalogEntry,
   RemoteAgentPromptInfo,
   SystemPromptOptions,
+  ActiveEditorPromptContext,
 } from './SystemPromptBuilder';
 
 interface ContextTokenTrackerLike {
@@ -48,6 +49,7 @@ export interface ModelAgentPromptContextSnapshot {
   latestCompactionRecord: CompactedContext | null;
   effectiveContextWindow?: number;
   compactionToolSelectors?: string[];
+  editorContext?: ActiveEditorPromptContext | null;
 }
 
 export interface ModelAgentMessageOptions {
@@ -107,6 +109,7 @@ export class ModelAgentPromptContextAssembler {
       legacyCompactionRecord: snapshot.latestCompactionRecord,
       toolCatalog: this.deps.getToolCatalog?.(),
       remoteAgents: this.deps.getRemoteAgents?.(),
+      editorContext: snapshot.editorContext,
     };
     let prompt = await this.deps.systemPromptBuilder.build(promptOptions);
     const retainedReserve = snapshot.compactionFrontier.at(-1)?.retainedTokensAtCompaction ?? 0;

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-14T21:57:00.966Z",
+  "generatedAt": "2026-11-14T22:44:45.287Z",
   "selector": "--help",
   "toolCount": 78,
   "agentCount": 13,
@@ -3753,5 +3753,5 @@
       ]
     }
   ],
-  "nexusVersion": "5.25.1"
+  "nexusVersion": "5.26.0"
 }

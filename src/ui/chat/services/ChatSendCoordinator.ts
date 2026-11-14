@@ -137,6 +137,7 @@ interface ChatSendCoordinatorDependencies {
   ensurePreservationService?: () => Promise<void>;
   getStorageAdapter: () => StorageAdapterLike | null;
   onUpdateContextProgress: () => void;
+  onAfterMessageSent?: () => void;
   compactionService?: {
     compact(conversation: ConversationData, options?: CompactionOptions): CompactedContext;
   };
@@ -265,6 +266,7 @@ export class ChatSendCoordinator {
       if (sent && generation === this.sendGeneration && !(metadata && 'hidden' in metadata && metadata.hidden === true)) {
         modelAgentManager.clearMessageEnhancement();
         chatInput?.clearMessageEnhancer();
+        this.deps.onAfterMessageSent?.();
       }
     }
   }

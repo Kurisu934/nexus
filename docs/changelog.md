@@ -2,6 +2,13 @@
 
 ## November 2026
 
+**v5.26.0** — Automatic active-note context and cross-blur selection capture
+
+- Automatically attach the currently open Markdown note (`<active_note>`) in the chat composer context tray, with one-tap toggle to exclude or re-attach it per chat view, live context-window percentage accounting, and automatic deduplication when the note is already referenced in `<files>`.
+- Capture highlighted note text (`<selected_text>` with line ranges in Source/Live Preview and DOM selection snapshots in Reading View) before focus moves into the chat composer (`selectionchange` + capture-phase `pointerdown` + **Add selection to Nexus chat** context menu), displaying a removable selection chip above the input and consuming it cleanly after sending.
+
+---
+
 **v5.25.1** — Fix streaming response crash in newly opened chat views
 
 - Restore `StreamingController` initialization in `ChatView.initializeControllers()` so streaming chunks no longer fail with `undefined is not an object (evaluating 'this.streamingController.updateStreamingChunk')` on iPadOS, iOS, and desktop.
