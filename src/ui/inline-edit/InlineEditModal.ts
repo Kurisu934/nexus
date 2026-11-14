@@ -91,6 +91,7 @@ export class InlineEditModal extends Modal {
   }
 
   onOpen(): void {
+    this.modalEl.addClass('claudesidian-inline-edit-modal');
     void this.initializeModal().catch((error) => {
       console.error('[InlineEditModal] Failed to initialize modal:', error);
     });
@@ -535,6 +536,7 @@ export class InlineEditModal extends Modal {
     this.resultTextarea = null;
 
     // Clear content
+    this.modalEl.removeClass('claudesidian-inline-edit-modal');
     this.contentEl.empty();
   }
 }

@@ -711,7 +711,11 @@ export class ChatView extends ItemView {
       // Leave generated content visible. Retrying this action only repeats storage.
       const fragment = createFragment();
       fragment.appendText('Response not saved. ');
-      const retry = fragment.createEl('button', { text: 'Retry save' });
+      const retry = fragment.createEl('button', {
+        text: 'Retry save',
+        cls: 'clickable-icon chat-notice-action-btn',
+        attr: { type: 'button' },
+      });
       const notice = new Notice(fragment, 0);
       this.registerDomEvent(retry, 'click', () => {
         retry.disabled = true;
@@ -883,13 +887,21 @@ export class ChatView extends ItemView {
 
     this.uiStateController.initializeEventListeners();
 
-    // Wire search input with 300ms debounce
-    if (this.layoutElements.searchInput) {
-      this.registerDomEvent(this.layoutElements.searchInput, 'input', () => {
+    // Wire search input with 300ms debounce and clear button
+    const searchInput = this.layoutElements.searchInput;
+    const searchClearButton = this.layoutElements.searchClearButton;
+    if (searchInput) {
+      const syncSearchClearVisibility = () => {
+        searchClearButton?.toggleClass('is-hidden', searchInput.value.length === 0);
+      };
+      syncSearchClearVisibility();
+
+      this.registerDomEvent(searchInput, 'input', () => {
+        syncSearchClearVisibility();
         if (this.searchDebounceTimer) {
           window.clearTimeout(this.searchDebounceTimer);
         }
-        const query = this.layoutElements.searchInput.value.trim();
+        const query = searchInput.value.trim();
         if (query.length === 0) {
           this.searchDebounceTimer = null;
           void this.conversationManager.clearSearch();
@@ -900,6 +912,21 @@ export class ChatView extends ItemView {
           void this.conversationManager.searchConversations(query);
         }, 300);
       });
+
+      if (searchClearButton) {
+        this.registerDomEvent(searchClearButton, 'click', () => {
+          if (this.searchDebounceTimer) {
+            window.clearTimeout(this.searchDebounceTimer);
+            this.searchDebounceTimer = null;
+          }
+          searchInput.value = '';
+          syncSearchClearVisibility();
+          void this.conversationManager.clearSearch();
+          if (!Platform.isMobile) {
+            searchInput.focus();
+          }
+        });
+      }
     }
 
     // Refresh chat chrome when user switches back to this tab
@@ -1054,6 +1081,10 @@ export class ChatView extends ItemView {
    */
   private async loadInitialData(): Promise<void> {
     await this.sessionCoordinator.loadInitialData();
+  }
+
+  getCurrentConversationId(): string | null {
+    return this.conversationManager?.getCurrentConversation()?.id ?? null;
   }
 
   async openConversationById(conversationId: string): Promise<void> {

@@ -10,6 +10,8 @@
 import type { App, Plugin } from 'obsidian';
 import type { Settings } from '../../settings';
 import type { ChatService } from '../../services/chat/ChatService';
+import type { ChatOpenLocation } from '../../types/plugin/PluginTypes';
+import { openOrRevealChatLeaf } from './ChatOpenLocationHelper';
 
 /**
  * Plugin interface with optional getServiceIfReady method.
@@ -111,6 +113,30 @@ export class ChatUIManager {
                 }
             });
 
+            plugin.addCommand({
+                id: 'open-chat-split-right',
+                name: 'Open chat in split right',
+                callback: () => {
+                    void this.activateChatView('right-split');
+                }
+            });
+
+            plugin.addCommand({
+                id: 'open-chat-tab',
+                name: 'Open chat in new tab',
+                callback: () => {
+                    void this.activateChatView('tab');
+                }
+            });
+
+            plugin.addCommand({
+                id: 'open-chat-sidebar',
+                name: 'Open chat in right sidebar',
+                callback: () => {
+                    void this.activateChatView('right-sidebar');
+                }
+            });
+
             // Mark as registered
             this.chatUIRegistered = true;
 
@@ -120,30 +146,14 @@ export class ChatUIManager {
     }
 
     /**
-     * Activate chat view in sidebar
+     * Activate chat view in the configured or requested workspace location
      */
-    async activateChatView(): Promise<void> {
+    async activateChatView(overrideLocation?: ChatOpenLocation): Promise<void> {
         const { app } = this.config;
 
         const { CHAT_VIEW_TYPE } = await import('../../ui/chat/ChatView');
-        
-        // Check if chat view already exists
-        const existingLeaf = app.workspace.getLeavesOfType(CHAT_VIEW_TYPE)[0];
-        if (existingLeaf) {
-            await app.workspace.revealLeaf(existingLeaf);
-            return;
-        }
-        
-        // Create new chat view in right sidebar
-        const leaf = app.workspace.getRightLeaf(false);
-        if (!leaf) return;
-
-        await leaf.setViewState({
-            type: CHAT_VIEW_TYPE,
-            active: true
-        });
-
-        await app.workspace.revealLeaf(leaf);
+        const configured = overrideLocation ?? this.config.settings?.settings?.defaultChatLayout;
+        await openOrRevealChatLeaf(app, CHAT_VIEW_TYPE, configured, { relocateExisting: true });
     }
 
     /**

@@ -87,6 +87,7 @@ export class FilePickerRenderer {
     if (this.showBackButton) {
       new ButtonComponent(leftSection)
         .setButtonText('Back')
+        .setClass('clickable-icon')
         .onClick(() => this.onCancel());
     }
     leftSection.createEl('h3', { text: this.title });

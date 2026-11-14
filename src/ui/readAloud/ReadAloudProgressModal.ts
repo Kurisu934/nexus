@@ -13,7 +13,7 @@
  * command manager, keeping this component free of session/backend coupling.
  */
 
-import { App, Component, Modal } from 'obsidian';
+import { App, ButtonComponent, Component, Modal } from 'obsidian';
 
 // Number of waveform bars to render. Matches the phase-class cycle (0..11) used
 // by the live-voice waveform; bars beyond 12 reuse the cycle via index % 12.
@@ -59,6 +59,13 @@ export class ReadAloudProgressModal extends Modal {
       cls: 'read-aloud-progress-status',
       text: this.title
     });
+
+    const buttonContainer = contentEl.createDiv('modal-button-container');
+    new ButtonComponent(buttonContainer)
+      .setButtonText('Stop')
+      .onClick(() => {
+        this.close();
+      });
   }
 
   /**

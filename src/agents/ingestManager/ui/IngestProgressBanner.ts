@@ -99,7 +99,7 @@ export class IngestProgressBanner {
     barContainer.createDiv({ cls: 'nexus-ingest-progress-bar-fill' });
 
     // Dismiss button (hidden by default, shown for complete/error)
-    const dismissBtn = banner.createEl('button', { cls: 'nexus-ingest-progress-dismiss' });
+    const dismissBtn = banner.createEl('button', { cls: 'nexus-ingest-progress-dismiss clickable-icon' });
     dismissBtn.setAttribute('aria-label', 'Dismiss');
     setIcon(dismissBtn, 'x');
     const dismissHandler = () => this.remove(progress.filePath);

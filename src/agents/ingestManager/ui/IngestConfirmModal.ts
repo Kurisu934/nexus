@@ -80,6 +80,7 @@ export class IngestConfirmModal extends Modal {
 
   onOpen(): void {
     const { contentEl } = this;
+    this.modalEl.addClass('nexus-ingest-confirm-modal');
     contentEl.addClass('nexus-ingest-confirm-modal');
 
     // Title
@@ -101,6 +102,7 @@ export class IngestConfirmModal extends Modal {
 
   onClose(): void {
     const { contentEl } = this;
+    this.modalEl.removeClass('nexus-ingest-confirm-modal');
     contentEl.empty();
 
     // If the modal was closed without clicking Ingest, treat as cancel
@@ -197,7 +199,7 @@ export class IngestConfirmModal extends Modal {
 
     const cancelBtn = buttonRow.createEl('button', {
       text: 'Cancel',
-      cls: 'nexus-ingest-confirm-cancel'
+      cls: 'nexus-ingest-confirm-cancel clickable-icon'
     });
     cancelBtn.addEventListener('click', () => {
       this.close();

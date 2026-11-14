@@ -28,10 +28,17 @@ export class ConversationTitleModal extends Modal {
     this.result = initialTitle || null;
     this.submitted = false;
 
+    const titleText = isRename ? 'Rename conversation' : 'New conversation';
+    this.modalEl?.addClass('nexus-conversation-title-modal');
+    if (typeof this.setTitle === 'function') {
+      this.setTitle(titleText);
+    }
+
     const { contentEl } = this;
     contentEl.addClass('chat-conversation-title-modal');
-
-    contentEl.createEl('h2', { text: isRename ? 'Rename conversation' : 'New conversation' });
+    if (typeof this.setTitle !== 'function') {
+      contentEl.createEl('h2', { text: titleText });
+    }
     contentEl.createEl('p', {
       text: isRename
         ? 'Enter a new title for this conversation:'
@@ -65,13 +72,15 @@ export class ConversationTitleModal extends Modal {
 
     const cancelBtn = buttonContainer.createEl('button', {
       text: 'Cancel',
-      cls: 'mod-cancel'
+      cls: 'mod-cancel clickable-icon',
+      attr: { type: 'button' }
     });
     this.modalEvents.registerDomEvent(cancelBtn, 'click', () => this.close());
 
     const submitBtn = buttonContainer.createEl('button', {
       text: isRename ? 'Save' : 'Create',
-      cls: 'mod-cta'
+      cls: 'mod-cta',
+      attr: { type: 'button' }
     });
     this.modalEvents.registerDomEvent(submitBtn, 'click', () => this.submit());
 
@@ -111,7 +120,7 @@ export class ConversationTitleModal extends Modal {
     if (typeof this.inputEl?.blur === 'function') {
       this.inputEl.blur();
     }
-
+    this.modalEl?.removeClass('nexus-conversation-title-modal');
     const { contentEl } = this;
     contentEl.empty();
     this.modalEvents?.unload();

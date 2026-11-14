@@ -83,6 +83,11 @@ export interface ProcessedFilesData {
 }
 
 /**
+ * Default workspace location where Nexus chat opens.
+ */
+export type ChatOpenLocation = 'right-sidebar' | 'right-split' | 'tab' | 'left-sidebar';
+
+/**
  * Plugin settings interface
  * Includes vault access toggle and version tracking
  */
@@ -108,6 +113,7 @@ export interface MCPSettings {
   defaultWorkspaceId?: string;
   defaultPromptId?: string;
   defaultContextNotes?: string[];
+  defaultChatLayout?: ChatOpenLocation;
   // Update tracking
   lastUpdateVersion?: string;
   lastUpdateDate?: string;

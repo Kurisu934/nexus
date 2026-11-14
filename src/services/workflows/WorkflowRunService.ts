@@ -9,6 +9,9 @@ import type { CustomPromptStorageService } from '../../agents/promptManager/serv
 import type { PreparedWorkflow, SessionWorkflowPort } from '../instructions/types';
 import type { WorkflowPreparationService } from './WorkflowPreparationService';
 import type { WorkspaceWorkflow } from '../../database/types/workspace/WorkspaceTypes';
+import type { ChatOpenLocation } from '../../types/plugin/PluginTypes';
+import { getNexusPlugin } from '../../utils/pluginLocator';
+import { openOrRevealChatLeaf } from '../../core/ui/ChatOpenLocationHelper';
 import {
   buildWorkflowKickoffMessage,
   buildWorkflowRunTitle,
@@ -24,6 +27,14 @@ export interface WorkflowRunServiceDeps {
   customPromptStorage?: CustomPromptStorageService | null;
   workflowPreparation: WorkflowPreparationService;
   sessionWorkflows: SessionWorkflowPort;
+}
+
+interface PluginWithChatLayoutSettings extends Plugin {
+  settings?: {
+    settings?: {
+      defaultChatLayout?: ChatOpenLocation;
+    };
+  };
 }
 
 interface WorkflowModelOption {
@@ -197,21 +208,19 @@ export class WorkflowRunService {
     }
   ): Promise<boolean> {
     const { CHAT_VIEW_TYPE } = await import('../../ui/chat/ChatView');
+    const defaultChatLayout = getNexusPlugin<PluginWithChatLayoutSettings>(this.deps.app)
+      ?.settings?.settings?.defaultChatLayout;
 
-    let leaf: WorkspaceLeaf | null = this.deps.app.workspace.getLeavesOfType(CHAT_VIEW_TYPE)[0] ?? null;
+    const leaf = await openOrRevealChatLeaf(
+      this.deps.app,
+      CHAT_VIEW_TYPE,
+      defaultChatLayout,
+      { relocateExisting: false }
+    );
     if (!leaf) {
-      leaf = this.deps.app.workspace.getRightLeaf(false);
-      if (!leaf) {
-        return false;
-      }
-
-      await leaf.setViewState({
-        type: CHAT_VIEW_TYPE,
-        active: true
-      });
+      return false;
     }
 
-    await this.deps.app.workspace.revealLeaf(leaf);
     return await this.waitForChatViewReady(leaf, conversationId, kickoffMessage, options);
   }
 

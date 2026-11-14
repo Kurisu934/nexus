@@ -27,6 +27,7 @@ export class UnifiedTabs {
   private activeTabKey: string;
   private onTabChange?: (tabKey: string) => void;
   private component?: Component;
+  private cleanups: Array<() => void> = [];
 
   constructor(options: UnifiedTabsOptions) {
     this.containerEl = options.containerEl;
@@ -51,6 +52,7 @@ export class UnifiedTabs {
       this.component.registerDomEvent(el, type, handler);
     } else {
       el.addEventListener(type, handler);
+      this.cleanups.push(() => el.removeEventListener(type, handler));
     }
   }
 
@@ -61,13 +63,21 @@ export class UnifiedTabs {
     // Create tabs container with exact same class as Memory Manager
     this.tabContainer = this.containerEl.createDiv({ cls: 'memory-settings-tabs' });
     this.tabContainer.addClass('nexus-settings-tabs');
-    
+    this.tabContainer.setAttribute('role', 'tablist');
+
     // Create individual tab elements exactly like Memory Manager
     tabConfigs.forEach(config => {
-      this.tabs[config.key] = this.tabContainer.createDiv({ 
+      const tabEl = this.tabContainer.createDiv({
         cls: 'memory-tab nexus-settings-tab',
-        text: config.label 
+        text: config.label,
+        attr: {
+          role: 'tab',
+          tabindex: '0',
+          'aria-selected': 'false'
+        }
       });
+      tabEl.tabIndex = 0;
+      this.tabs[config.key] = tabEl;
     });
 
     // Content container with exact same class as Memory Manager
@@ -85,7 +95,14 @@ export class UnifiedTabs {
       const clickHandler = () => {
         this.switchToTab(key);
       };
+      const keydownHandler = (event: KeyboardEvent) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          this.switchToTab(key);
+        }
+      };
       this.safeRegisterDomEvent(tab, 'click', clickHandler);
+      this.safeRegisterDomEvent(tab, 'keydown', keydownHandler);
     });
   }
 
@@ -96,13 +113,17 @@ export class UnifiedTabs {
     this.activeTabKey = tabKey;
     
     // Remove active class from all tabs and contents (exact Memory Manager pattern)
-    Object.values(this.tabs).forEach(t => t.removeClass('active'));
+    Object.values(this.tabs).forEach(t => {
+      t.removeClass('active');
+      t.setAttribute('aria-selected', 'false');
+    });
     Object.values(this.contents).forEach(c => c.removeClass('active'));
-    
+
     // Add active class to clicked tab and corresponding content (exact Memory Manager pattern)
-    this.tabs[tabKey]?.addClass('active');
+    const activeTab = this.tabs[tabKey];
+    activeTab?.addClass('active');
+    activeTab?.setAttribute('aria-selected', 'true');
     this.contents[tabKey]?.addClass('active');
-    
     // Call callback if provided
     if (notify) this.onTabChange?.(tabKey);
   }
@@ -171,6 +192,10 @@ export class UnifiedTabs {
    * Destroy the tabs component
    */
   destroy(): void {
+    for (const cleanup of this.cleanups) {
+      cleanup();
+    }
+    this.cleanups = [];
     this.containerEl.empty();
     this.tabs = {};
     this.contents = {};

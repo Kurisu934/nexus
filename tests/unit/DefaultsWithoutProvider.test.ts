@@ -71,7 +71,7 @@ describe('Defaults with no provider set up', () => {
   it('shows no Thinking row for a model nobody can use', async () => {
     const h = await renderDefaults(freshInstall());
     try {
-      expect(rowNames(topItems(h.root))).toEqual([COPY.provider, COPY.model]);
+      expect(rowNames(topItems(h.root))).toEqual([COPY.provider, COPY.model, COPY.openChatIn]);
     } finally {
       h.tab.destroy();
     }

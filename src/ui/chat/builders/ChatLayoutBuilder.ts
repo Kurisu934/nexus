@@ -32,6 +32,8 @@ export interface ChatLayoutElements {
   loadingOverlay: HTMLElement;
   branchHeaderContainer: HTMLElement;
   searchInput: HTMLInputElement;
+  sidebarCloseButton?: HTMLElement;
+  searchClearButton?: HTMLButtonElement;
 }
 
 export class ChatLayoutBuilder {
@@ -71,7 +73,14 @@ export class ChatLayoutBuilder {
 
     // Backdrop and sidebar
     const backdrop = chatLayout.createDiv('chat-backdrop');
-    const { sidebarContainer, conversationListContainer, newChatButton, searchInput } = this.createSidebar(chatLayout);
+    const {
+      sidebarContainer,
+      conversationListContainer,
+      newChatButton,
+      sidebarCloseButton,
+      searchInput,
+      searchClearButton
+    } = this.createSidebar(chatLayout);
 
     return {
       messageContainer,
@@ -90,7 +99,9 @@ export class ChatLayoutBuilder {
       sidebarContainer,
       loadingOverlay,
       branchHeaderContainer,
-      searchInput
+      searchInput,
+      sidebarCloseButton,
+      searchClearButton
     };
   }
 
@@ -225,32 +236,67 @@ export class ChatLayoutBuilder {
     sidebarContainer: HTMLElement;
     conversationListContainer: HTMLElement;
     newChatButton: HTMLElement;
+    sidebarCloseButton: HTMLElement;
     searchInput: HTMLInputElement;
+    searchClearButton: HTMLButtonElement;
   } {
     const sidebarContainer = container.createDiv('chat-sidebar');
     sidebarContainer.addClass('chat-sidebar-hidden');
+    sidebarContainer.setAttribute('aria-hidden', 'true');
+    sidebarContainer.inert = true;
 
     const sidebarHeader = sidebarContainer.createDiv('chat-sidebar-header');
     sidebarHeader.createEl('h3', { text: 'Conversations' });
-    const newChatButton = sidebarHeader.createEl('button', {
+    const headerActions = sidebarHeader.createDiv('chat-sidebar-header-actions');
+    const newChatButton = headerActions.createEl('button', {
       cls: 'chat-new-button clickable-icon',
       text: 'New chat',
-      attr: { type: 'button' }
+      attr: {
+        type: 'button',
+        'aria-label': 'New conversation'
+      }
     });
+    const sidebarCloseButton = headerActions.createEl('button', {
+      cls: 'chat-sidebar-close-btn clickable-icon',
+      attr: {
+        type: 'button',
+        'aria-label': 'Close conversations',
+        title: 'Close conversations'
+      }
+    });
+    setIcon(sidebarCloseButton, 'x');
 
     // Search input between header and list
     const searchContainer = sidebarContainer.createDiv('conversation-search-container');
-    const searchInput = searchContainer.createEl('input', {
+    const searchField = searchContainer.createDiv('conversation-search-field');
+    const searchIcon = searchField.createSpan('conversation-search-icon');
+    setIcon(searchIcon, 'search');
+    const searchInput = searchField.createEl('input', {
       cls: 'conversation-search-input',
       attr: {
         type: 'text',
-        placeholder: 'Search by title...',
+        placeholder: 'Search conversations...',
         'aria-label': 'Search conversations by title',
       }
     });
+    const searchClearButton = searchField.createEl('button', {
+      cls: 'conversation-search-clear clickable-icon is-hidden',
+      attr: {
+        type: 'button',
+        'aria-label': 'Clear search'
+      }
+    });
+    setIcon(searchClearButton, 'x');
 
     const conversationListContainer = sidebarContainer.createDiv('conversation-list-container');
 
-    return { sidebarContainer, conversationListContainer, newChatButton, searchInput };
+    return {
+      sidebarContainer,
+      conversationListContainer,
+      newChatButton,
+      sidebarCloseButton,
+      searchInput,
+      searchClearButton
+    };
   }
 }

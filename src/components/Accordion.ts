@@ -74,7 +74,7 @@ export class Accordion extends Component {
             attr: { role: 'heading', 'aria-level': String(options.headingLevel ?? 3) }
         });
         this.toggleEl = headingEl.createEl('button', {
-            cls: 'nexus-accordion-toggle',
+            cls: 'nexus-accordion-toggle clickable-icon',
             attr: { type: 'button', id: toggleId, 'aria-controls': contentId }
         });
 

@@ -154,7 +154,10 @@ export class MessageBubbleImageRenderer {
     img.alt = imageData.prompt || 'Generated image';
     img.setAttribute('loading', 'lazy');
 
-    const openButton = bubble.createEl('button', { cls: 'generated-image-open-btn' });
+    const openButton = bubble.createEl('button', {
+      cls: 'generated-image-open-btn clickable-icon',
+      attr: { type: 'button' }
+    });
     setIcon(openButton, 'external-link');
     openButton.createSpan({ text: 'Open in Obsidian' });
     this.deps.component.registerDomEvent(openButton, 'click', () => {

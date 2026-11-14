@@ -1,4 +1,4 @@
-import { Component, Notice } from 'obsidian';
+import { Component, Notice, setIcon } from 'obsidian';
 import type { ModelAgentManager } from '../services/ModelAgentManager';
 import type { ModelOption } from '../types/SelectionTypes';
 import { StaticModelsService } from '../../../services/StaticModelsService';
@@ -65,7 +65,8 @@ export class ChatModelPopover {
   private isDisposed = false;
   private renderGeneration = 0;
   private models: ModelOption[] = [];
-
+  private filterQuery = '';
+  private renderEvents: Component | null = null;
   constructor(private readonly options: ChatModelPopoverOptions) {
     this.popoverEl = this.options.containerEl.createDiv({
       cls: 'chat-model-popover is-hidden',
@@ -142,6 +143,7 @@ export class ChatModelPopover {
     this.anchorEl = anchorEl;
     this.isOpen = true;
     this.isLoadingModels = true;
+    this.filterQuery = '';
 
     this.updatePosition(anchorEl);
     this.popoverEl.removeClass('is-hidden');
@@ -160,7 +162,7 @@ export class ChatModelPopover {
       if (!this.isDisposed && generation === this.renderGeneration) {
         this.isLoadingModels = false;
         if (this.isOpen) {
-          this.renderContent();
+          this.renderContent(true);
         }
       }
     }
@@ -173,6 +175,7 @@ export class ChatModelPopover {
 
     this.isOpen = false;
     this.renderGeneration += 1;
+    this.filterQuery = '';
     this.popoverEl.addClass('is-hidden');
     this.options.onVisibilityChange?.(false);
   }
@@ -187,8 +190,11 @@ export class ChatModelPopover {
   cleanup(): void {
     this.isDisposed = true;
     this.close();
+    this.renderEvents?.unload();
+    this.renderEvents = null;
     this.anchorEl = null;
     this.models = [];
+    this.filterQuery = '';
     this.popoverEl.remove();
   }
 
@@ -200,67 +206,66 @@ export class ChatModelPopover {
       return;
     }
 
-    const dockEl = anchorEl.closest('.chat-composer-dock, .chat-composer-card') ?? anchorEl;
+    const dockEl = anchorEl.closest?.('.chat-composer-dock, .chat-composer-card') ?? anchorEl;
     const containerRect = this.options.containerEl.getBoundingClientRect();
     const dockRect = dockEl.getBoundingClientRect();
 
     if (containerRect.height > 0 && dockRect.top > 0) {
       const bottomOffset = Math.max(8, Math.round(containerRect.bottom - dockRect.top + 8));
-      this.popoverEl.style.setProperty('--chat-popover-bottom', `${bottomOffset}px`);
+      if (typeof this.popoverEl.style?.setProperty === 'function') {
+        this.popoverEl.style.setProperty('--chat-popover-bottom', `${bottomOffset}px`);
+        const availableHeight = Math.max(180, Math.round(dockRect.top - containerRect.top - 16));
+        this.popoverEl.style.setProperty('--chat-popover-max-height', `${availableHeight}px`);
+      }
     }
   }
 
-  private renderContent(): void {
+  private renderContent(scrollToSelected = false): void {
+    this.renderEvents?.unload();
+    this.renderEvents = new Component();
+    this.renderEvents.load();
+
     this.popoverEl.empty();
 
     const selected = this.options.modelAgentManager.getSelectedModel();
     const modelHeader = this.popoverEl.createDiv('chat-popover-section-label');
     modelHeader.createSpan({ text: 'Model' });
 
-    const listEl = this.popoverEl.createDiv('chat-model-list');
     const displayModels = this.models.length > 0 ? this.models : selected ? [selected] : [];
 
-    if (displayModels.length === 0) {
-      listEl.createDiv({
-        cls: 'chat-model-empty',
-        text: this.isLoadingModels ? 'Loading models...' : 'No configured models available'
+    let listEl: HTMLElement;
+    if (displayModels.length > 5) {
+      const searchWrap = this.popoverEl.createDiv('chat-model-search-wrap');
+      const searchInput = searchWrap.createEl('input', {
+        cls: 'chat-model-search-input',
+        value: this.filterQuery,
+        attr: {
+          type: 'search',
+          placeholder: 'Filter models...',
+          'aria-label': 'Filter models'
+        }
+      });
+      listEl = this.popoverEl.createDiv('chat-model-list');
+      this.renderEvents.registerDomEvent(searchInput, 'input', () => {
+        this.filterQuery = searchInput.value;
+        const currentSelected = this.options.modelAgentManager.getSelectedModel();
+        const currentDisplayModels = this.models.length > 0
+          ? this.models
+          : currentSelected
+            ? [currentSelected]
+            : [];
+        this.renderModelList(listEl, currentDisplayModels, currentSelected, false);
       });
     } else {
-      for (const model of displayModels) {
-        const isSelected =
-          selected?.providerId === model.providerId &&
-          selected?.modelId === model.modelId;
-
-        const optionBtn = listEl.createEl('button', {
-          cls: isSelected
-            ? 'clickable-icon chat-model-option is-selected'
-            : 'clickable-icon chat-model-option',
-          attr: {
-            type: 'button',
-            'aria-pressed': isSelected ? 'true' : 'false',
-            'data-provider-id': model.providerId,
-            'data-model-id': model.modelId
-          }
-        });
-        optionBtn.disabled = this.isSwitching;
-
-        optionBtn.createSpan({
-          cls: 'chat-model-option-name',
-          text: model.modelName
-        });
-
-        const contextLabel = model.contextWindow > 0 ? formatContextWindow(model.contextWindow) : null;
-        const subLabel = contextLabel ? `${model.providerName} · ${contextLabel}` : model.providerName;
-        optionBtn.createSpan({
-          cls: 'chat-model-option-sub',
-          text: subLabel
-        });
-      }
+      listEl = this.popoverEl.createDiv('chat-model-list');
     }
+
+    this.renderModelList(listEl, displayModels, selected, scrollToSelected);
 
     if (!selected) {
       return;
     }
+
 
     const capabilities = getStaticModelCapabilities(
       StaticModelsService.getInstance(),
@@ -312,6 +317,102 @@ export class ChatModelPopover {
         }
       });
       tierBtn.disabled = this.isSwitching;
+    }
+  }
+  private renderModelList(
+    listEl: HTMLElement,
+    displayModels: ModelOption[],
+    selected: ModelOption | null,
+    scrollToSelected = false
+  ): void {
+    listEl.empty();
+
+    if (displayModels.length === 0) {
+      listEl.createDiv({
+        cls: 'chat-model-empty',
+        text: this.isLoadingModels ? 'Loading models...' : 'No configured models available'
+      });
+      return;
+    }
+
+    const normalizedQuery = this.filterQuery.trim().toLowerCase();
+    const filteredModels = normalizedQuery
+      ? displayModels.filter((model) =>
+        model.modelName.toLowerCase().includes(normalizedQuery) ||
+        model.modelId.toLowerCase().includes(normalizedQuery) ||
+        model.providerName.toLowerCase().includes(normalizedQuery) ||
+        model.providerId.toLowerCase().includes(normalizedQuery)
+      )
+      : displayModels;
+
+    if (filteredModels.length === 0) {
+      listEl.createDiv({
+        cls: 'chat-model-empty',
+        text: 'No matching models'
+      });
+      return;
+    }
+
+    const groupedModels = new Map<string, ModelOption[]>();
+    for (const model of filteredModels) {
+      const groupName = model.providerName || model.providerId;
+      const existing = groupedModels.get(groupName);
+      if (existing) {
+        existing.push(model);
+      } else {
+        groupedModels.set(groupName, [model]);
+      }
+    }
+
+    let selectedButton: HTMLButtonElement | null = null;
+    for (const [providerName, providerModels] of groupedModels) {
+      listEl.createDiv({
+        cls: 'chat-model-group-header',
+        text: providerName
+      });
+
+      for (const model of providerModels) {
+        const isSelected =
+          selected?.providerId === model.providerId &&
+          selected?.modelId === model.modelId;
+
+        const optionBtn = listEl.createEl('button', {
+          cls: isSelected
+            ? 'clickable-icon chat-model-option is-selected'
+            : 'clickable-icon chat-model-option',
+          attr: {
+            type: 'button',
+            'aria-pressed': isSelected ? 'true' : 'false',
+            'data-provider-id': model.providerId,
+            'data-model-id': model.modelId
+          }
+        });
+        optionBtn.disabled = this.isSwitching;
+
+        const mainEl = optionBtn.createDiv('chat-model-option-main');
+        mainEl.createSpan({
+          cls: 'chat-model-option-name',
+          text: model.modelName
+        });
+
+        const contextLabel = model.contextWindow > 0 ? formatContextWindow(model.contextWindow) : null;
+        if (contextLabel) {
+          mainEl.createSpan({
+            cls: 'chat-model-option-sub',
+            text: contextLabel
+          });
+        }
+
+        if (isSelected) {
+          const checkEl = optionBtn.createSpan('chat-model-option-check');
+          setIcon(checkEl, 'check');
+          selectedButton = optionBtn;
+        }
+      }
+    }
+
+    if (scrollToSelected && selectedButton && typeof selectedButton.scrollIntoView === 'function') {
+      selectedButton.scrollIntoView({ block: 'nearest' });
     }
   }
 

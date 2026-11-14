@@ -11,6 +11,7 @@ import { App, Notice, Platform } from 'obsidian';
 import { LLMProviderSettings } from '../../types/llm/ProviderTypes';
 import { Settings } from '../../settings';
 import { DEFAULT_STORAGE_SETTINGS } from '../../types/plugin/PluginTypes';
+import { resolveChatOpenLocation } from '../../core/ui/ChatOpenLocationHelper';
 import { WorkspaceService } from '../../services/WorkspaceService';
 import { CustomPromptStorageService } from '../../agents/promptManager/services/CustomPromptStorageService';
 import { ChatSettingsRenderer, ChatSettings, ChatSettingsOptions } from '../../components/shared/ChatSettingsRenderer';
@@ -157,7 +158,8 @@ export class DefaultsTab {
       videoResolution: video?.resolution,
       workspaceId: pluginSettings.defaultWorkspaceId || null,
       promptId: pluginSettings.defaultPromptId || null,
-      contextNotes: [...(pluginSettings.defaultContextNotes || [])]
+      contextNotes: [...(pluginSettings.defaultContextNotes || [])],
+      chatLayout: resolveChatOpenLocation(pluginSettings.defaultChatLayout)
     };
   }
 
@@ -242,6 +244,7 @@ export class DefaultsTab {
     pluginSettings.defaultWorkspaceId = settings.workspaceId || undefined;
     pluginSettings.defaultPromptId = settings.promptId || undefined;
     pluginSettings.defaultContextNotes = [...settings.contextNotes];
+    pluginSettings.defaultChatLayout = resolveChatOpenLocation(settings.chatLayout);
 
     await this.services.settings.saveSettings();
   }

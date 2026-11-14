@@ -18,7 +18,7 @@ export class BreadcrumbNav {
     items.forEach((item, index) => {
       if (item.onClick) {
         const button = this.element.createEl('button', {
-          cls: 'nexus-breadcrumb-link',
+          cls: 'nexus-breadcrumb-link clickable-icon',
           text: item.label
         });
 

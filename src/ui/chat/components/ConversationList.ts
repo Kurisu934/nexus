@@ -106,24 +106,23 @@ export class ConversationList {
       };
       this.component?.registerDomEvent(content, 'click', selectHandler);
 
-      // Title
-      const title = content.createDiv('conversation-title');
+      // Top row: title + timestamp
+      const topRow = content.createDiv('conversation-item-top');
+      const title = topRow.createDiv('conversation-title');
       title.textContent = conversation.title;
 
-      // Last message preview
-      const lastMessage = conversation.messages[conversation.messages.length - 1];
-      if (lastMessage) {
-        const preview = content.createDiv('conversation-preview');
-        const previewText = lastMessage.content.length > 60
-          ? lastMessage.content.substring(0, 60) + '...'
-          : lastMessage.content;
-        preview.textContent = previewText;
-      }
-
-      // Timestamp
-      const timestamp = content.createDiv('conversation-timestamp');
+      const timestamp = topRow.createDiv('conversation-timestamp');
       timestamp.textContent = this.formatTimestamp(conversation.updated);
 
+      // Last message preview (collapsed to single line)
+      const lastMessage = conversation.messages[conversation.messages.length - 1];
+      const normalizedPreview = lastMessage ? (lastMessage.content ?? '').replace(/\s+/g, ' ').trim() : '';
+      if (normalizedPreview) {
+        const preview = content.createDiv('conversation-preview');
+        preview.textContent = normalizedPreview.length > 60
+          ? normalizedPreview.substring(0, 60) + '...'
+          : normalizedPreview;
+      }
       // Action buttons container
       const actions = item.createDiv('conversation-actions');
 

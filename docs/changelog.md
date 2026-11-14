@@ -2,6 +2,13 @@
 
 ## November 2026
 
+**v5.27.0** — Configurable chat open layout in Defaults and secondary UI overhaul
+
+- Add **Open chat in** under **Settings -> Nexus -> Defaults** (`Right sidebar`, `Split right`, `New tab`, or `Left sidebar`) plus explicit command palette entries (**Open chat in split right**, **Open chat in new tab**, **Open chat in right sidebar**), relocating an open chat view across sidebars and editor splits while preserving the active conversation.
+- Bring all secondary menus, drawers, modals, popovers, suggesters, and settings navigation up to the v5.25 editorial UI standard and fix remaining iPadOS/iOS button/modal overrides: add instant model filtering and provider grouping in **ChatModelPopover**, redesign the conversation history drawer and branch header, render **Chat settings** as a centered sheet on iPad instead of full-screen, protect shared **Accordion** fold headers and secondary modal controls with `.clickable-icon` specificity guards, fix **AgentStatusModal** sizing and `Continue` actions, upgrade top settings tabs to a segmented bar, and replace low-contrast suggester badges with theme-adaptive pills.
+
+---
+
 **v5.26.0** — Automatic active-note context and cross-blur selection capture
 
 - Automatically attach the currently open Markdown note (`<active_note>`) in the chat composer context tray, with one-tap toggle to exclude or re-attach it per chat view, live context-window percentage accounting, and automatic deduplication when the note is already referenced in `<files>`.

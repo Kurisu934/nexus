@@ -106,8 +106,9 @@ export class UIStateController {
       });
 
       const settingsBtn = welcomeContent.createEl('button', {
-        cls: 'chat-welcome-button',
-        text: 'Open settings'
+        cls: 'chat-welcome-button mod-cta',
+        text: 'Open settings',
+        attr: { type: 'button' }
       });
       const settingsBtnIcon = settingsBtn.createSpan({ cls: 'chat-welcome-button-icon' });
       setIcon(settingsBtnIcon, 'settings');
@@ -131,23 +132,39 @@ export class UIStateController {
    * Toggle conversation list visibility
    */
   toggleConversationList(): void {
-    const sidebar = this.containerEl.querySelector('.chat-sidebar');
+    const sidebar = this.containerEl.querySelector<HTMLElement>('.chat-sidebar');
     const backdrop = this.containerEl.querySelector('.chat-backdrop');
     if (!sidebar || !backdrop) return;
-    
+
     this.sidebarVisible = !this.sidebarVisible;
-    
+
     if (this.sidebarVisible) {
       sidebar.removeClass('chat-sidebar-hidden');
       sidebar.addClass('chat-sidebar-visible');
       backdrop.addClass('chat-backdrop-visible');
     } else {
+      const activeEl = sidebar.ownerDocument?.activeElement;
+      if (activeEl && sidebar.contains(activeEl) && 'blur' in activeEl && typeof activeEl.blur === 'function') {
+        const focusableEl = activeEl as HTMLElement;
+        focusableEl.blur();
+        const hamburgerButton = this.containerEl.querySelector<HTMLElement>('.chat-hamburger-button');
+        hamburgerButton?.focus?.();
+      }
       sidebar.removeClass('chat-sidebar-visible');
       sidebar.addClass('chat-sidebar-hidden');
       backdrop.removeClass('chat-backdrop-visible');
     }
 
+    sidebar.setAttribute('aria-hidden', this.sidebarVisible ? 'false' : 'true');
+    sidebar.inert = !this.sidebarVisible;
+
     this.events.onSidebarToggled(this.sidebarVisible);
+  }
+
+  closeConversationList(): void {
+    if (this.sidebarVisible) {
+      this.toggleConversationList();
+    }
   }
 
   /**
@@ -206,14 +223,16 @@ export class UIStateController {
       this.registerClickHandler(hamburgerButton as HTMLElement, hamburgerHandler);
     }
 
+    // Sidebar close button
+    const closeButton = this.containerEl.querySelector<HTMLElement>('.chat-sidebar-close-btn');
+    if (closeButton) {
+      this.registerClickHandler(closeButton, () => this.closeConversationList());
+    }
+
     // Backdrop click to close sidebar
     const backdrop = this.containerEl.querySelector('.chat-backdrop');
     if (backdrop) {
-      const backdropHandler = () => {
-        if (this.sidebarVisible) {
-          this.toggleConversationList();
-        }
-      };
+      const backdropHandler = () => this.closeConversationList();
       this.registerClickHandler(backdrop as HTMLElement, backdropHandler);
     }
   }

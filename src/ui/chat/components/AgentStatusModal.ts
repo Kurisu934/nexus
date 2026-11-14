@@ -51,10 +51,10 @@ export class AgentStatusModal extends Modal {
   }
 
   private async initializeModal(): Promise<void> {
+    this.modalEl?.addClass('nexus-agent-status-modal');
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass('nexus-agent-status-modal');
-
+    contentEl.addClass('nexus-agent-status-modal__content');
     this.titleEl.setText('Agents');
 
     // Load completed agents from branch storage
@@ -193,7 +193,7 @@ export class AgentStatusModal extends Modal {
     const actions = row.createDiv({ cls: 'nexus-agent-actions' });
     const viewBtn = actions.createEl('button', {
       cls: 'nexus-agent-view-btn clickable-icon',
-      attr: { 'aria-label': 'View agent conversation' },
+      attr: { type: 'button', 'aria-label': 'View agent conversation', title: 'View agent conversation' },
     });
     setIcon(viewBtn, 'eye');
     renderEvents.registerDomEvent(viewBtn, 'click', () => {
@@ -204,7 +204,7 @@ export class AgentStatusModal extends Modal {
     if (isRunning) {
       const stopBtn = actions.createEl('button', {
         cls: 'nexus-agent-stop-btn clickable-icon',
-        attr: { 'aria-label': 'Stop agent' },
+        attr: { type: 'button', 'aria-label': 'Stop agent', title: 'Stop agent' },
       });
       setIcon(stopBtn, 'square');
       renderEvents.registerDomEvent(stopBtn, 'click', () => {
@@ -212,6 +212,17 @@ export class AgentStatusModal extends Modal {
         this.renderContent();
       });
     } else {
+      if (agent.state === 'max_iterations') {
+        const continueBtn = actions.createEl('button', {
+          cls: 'nexus-agent-continue-btn clickable-icon',
+          attr: { type: 'button', 'aria-label': 'Continue agent', title: 'Continue agent' },
+        });
+        setIcon(continueBtn, 'play');
+        renderEvents.registerDomEvent(continueBtn, 'click', () => {
+          this.close();
+          this.callbacks.onContinueAgent(agent.branchId);
+        });
+      }
       const iconEl = actions.createSpan({ cls: `nexus-state-icon nexus-state-icon-${agent.state}` });
       setIcon(iconEl, getStateIconName(agent.state));
     }
@@ -233,6 +244,7 @@ export class AgentStatusModal extends Modal {
     }
     this.renderEvents?.unload();
     this.renderEvents = null;
+    this.modalEl?.removeClass('nexus-agent-status-modal');
     this.contentEl.empty();
   }
 }

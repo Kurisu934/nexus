@@ -50,7 +50,7 @@ export class TextAreaNoteSuggester extends ContentEditableSuggester<NoteSuggesti
     const badgeContainer = el.createDiv({ cls: 'suggester-badge-container' });
     
     if (item.data.estimatedTokens > this.maxTokensPerNote * 0.75) {
-      const tokenBadge = badgeContainer.createSpan({ cls: 'suggester-badge token-badge-warning' });
+      const tokenBadge = badgeContainer.createSpan({ cls: 'suggester-badge token-badge token-badge-warning' });
       tokenBadge.textContent = `~${item.data.estimatedTokens.toLocaleString()} tokens`;
     } else {
       // Just show token count

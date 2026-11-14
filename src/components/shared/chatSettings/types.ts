@@ -6,6 +6,7 @@ import type {
   VoiceDefaultSelectionSource
 } from '../../../types/llm/ProviderTypes';
 import type { VideoAspectRatio, VideoResolution } from '../../../services/llm/types/VideoTypes';
+import type { ChatOpenLocation } from '../../../types/plugin/PluginTypes';
 
 /** Which screen the shared renderer is drawing. */
 export type SettingsSurface = 'defaults' | 'chat';
@@ -63,6 +64,7 @@ export interface ChatSettings {
   workflowId?: string | null;
   promptId: string | null;
   contextNotes: string[];
+  chatLayout?: ChatOpenLocation;
 }
 
 /**

@@ -84,7 +84,13 @@ export const COPY = {
   noVideoProvider: 'No video provider',
   noProviders: 'No providers enabled',
   noCloudProviders: 'No cloud providers enabled',
-  none: 'None'
+  none: 'None',
+  openChatIn: 'Open chat in',
+  openChatInDesc: 'Where Nexus chat opens from the ribbon or command palette.',
+  layoutRightSidebar: 'Right sidebar',
+  layoutRightSplit: 'Split right',
+  layoutNewTab: 'New tab',
+  layoutLeftSidebar: 'Left sidebar'
 } as const;
 
 export const VOICE_COPY = {

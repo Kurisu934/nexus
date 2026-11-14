@@ -29,6 +29,7 @@ import { COPY, FOLD_TITLES } from '../../src/components/shared/chatSettings/copy
 import { chatSettings, llmSettings } from '../helpers/settingsRendererFixtures';
 import {
   accordions,
+  choose,
   control,
   findRow,
   flush,
@@ -64,15 +65,20 @@ async function renderChat(overrides: Parameters<typeof chatSettings>[0] = {}, op
 async function renderDefaults(llmOverrides: Parameters<typeof llmSettings>[0] = {}) {
   const container = createFakeRoot();
   const saveSettings = jest.fn(async () => undefined);
+  const pluginSettings: Record<string, unknown> = {
+    enableIngestion: true,
+    enableEmbeddings: true,
+    storage: undefined
+  };
   const tab = new DefaultsTab(container as unknown as HTMLElement, {
     app: localStorageApp() as never,
-    settings: { settings: { enableIngestion: true, enableEmbeddings: true, storage: undefined }, saveSettings } as never,
+    settings: { settings: pluginSettings, saveSettings } as never,
     llmProviderSettings: llmSettings({ defaultThinking: { enabled: true, effort: 'high' }, ...llmOverrides })
   });
   await flush();
   await flush();
   const root = container.children[0];
-  return { tab, container, root, saveSettings };
+  return { tab, container, root, saveSettings, pluginSettings };
 }
 
 describe('Defaults tab', () => {
@@ -93,13 +99,31 @@ describe('Defaults tab', () => {
     }
   });
 
-  it('holds Provider, Model and Thinking in the top block', async () => {
+  it('holds Provider, Model, Thinking and Open chat in in the top block', async () => {
     const { tab, root } = await renderDefaults();
     try {
-      expect(rowNames(topItems(root))).toEqual([COPY.provider, COPY.model, COPY.thinking]);
+      expect(rowNames(topItems(root))).toEqual([COPY.provider, COPY.model, COPY.thinking, COPY.openChatIn]);
       expect(optionLabels(control(findRow(topItems(root), COPY.thinking), 'select')))
         .toEqual(['Off', 'Low', 'Medium', 'High', 'Extra high', 'Max']);
       expect(control(findRow(topItems(root), COPY.thinking), 'select').value).toBe('high');
+      const layoutSelect = control(findRow(topItems(root), COPY.openChatIn), 'select');
+      expect(optionLabels(layoutSelect)).toEqual([
+        COPY.layoutRightSidebar, COPY.layoutRightSplit, COPY.layoutNewTab, COPY.layoutLeftSidebar
+      ]);
+      expect(layoutSelect.value).toBe('right-sidebar');
+    } finally {
+      tab.destroy();
+    }
+  });
+
+  it('persists defaultChatLayout when Open chat in changes', async () => {
+    const { tab, root, saveSettings, pluginSettings } = await renderDefaults();
+    try {
+      choose(control(findRow(topItems(root), COPY.openChatIn), 'select'), 'right-split');
+      await flush();
+      await flush();
+      expect(saveSettings).toHaveBeenCalledTimes(1);
+      expect(pluginSettings.defaultChatLayout).toBe('right-split');
     } finally {
       tab.destroy();
     }
@@ -176,6 +200,15 @@ describe('Chat settings', () => {
     const { container, renderer } = await renderChat();
     try {
       expect(foldTitles(container)).toEqual([...SHARED, FOLD_TITLES.voice]);
+    } finally {
+      renderer.destroy();
+    }
+  });
+
+  it('keeps only Provider, Model and Thinking in the top block (omits Open chat in)', async () => {
+    const { container, renderer } = await renderChat();
+    try {
+      expect(rowNames(topItems(container))).toEqual([COPY.provider, COPY.model, COPY.thinking]);
     } finally {
       renderer.destroy();
     }

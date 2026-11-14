@@ -85,7 +85,7 @@ export class ConfigModal extends Modal {
         // Windows tab button
         const windowsButton = tabButtonContainer.createEl('button', {
             text: 'Windows',
-            cls: 'mcp-tab-button'
+            cls: 'mcp-tab-button clickable-icon'
         });
         windowsButton.addEventListener('click', () => this.showTab('windows'));
         this.tabButtons['windows'] = windowsButton;
@@ -93,7 +93,7 @@ export class ConfigModal extends Modal {
         // Mac tab button
         const macButton = tabButtonContainer.createEl('button', {
             text: 'Mac',
-            cls: 'mcp-tab-button'
+            cls: 'mcp-tab-button clickable-icon'
         });
         macButton.addEventListener('click', () => this.showTab('mac'));
         this.tabButtons['mac'] = macButton;
@@ -101,7 +101,7 @@ export class ConfigModal extends Modal {
         // Linux tab button
         const linuxButton = tabButtonContainer.createEl('button', {
             text: 'Linux',
-            cls: 'mcp-tab-button'
+            cls: 'mcp-tab-button clickable-icon'
         });
         linuxButton.addEventListener('click', () => this.showTab('linux'));
         this.tabButtons['linux'] = linuxButton;

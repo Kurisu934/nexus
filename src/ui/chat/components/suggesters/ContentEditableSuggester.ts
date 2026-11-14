@@ -291,6 +291,7 @@ export abstract class ContentEditableSuggester<T> {
     items.forEach((item, index) => {
       if (index === this.selectedIndex) {
         item.addClass('is-selected');
+        item.scrollIntoView?.({ block: 'nearest' });
       } else {
         item.removeClass('is-selected');
       }

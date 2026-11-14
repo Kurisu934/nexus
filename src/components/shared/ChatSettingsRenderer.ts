@@ -55,6 +55,7 @@ import { Accordion } from '../Accordion';
 import { FoldStateStore } from './settings/FoldStateStore';
 import { createSettingGroup, type SettingGroupHandle } from './settings/settingGroup';
 import { bindSliderReadout } from './settings/sliderReadout';
+import { resolveChatOpenLocation } from '../../core/ui/ChatOpenLocationHelper';
 import { COPY, FOLD_ICONS, FOLD_IDS, FOLD_TITLES } from './chatSettings/copy';
 import {
   chatOptionsSummary,
@@ -461,6 +462,27 @@ export class ChatSettingsRenderer {
     const modelSetting = renderModelSetting(itemsEl, this.modelDropdownConfig('chat'));
     this.applyTextOnlyProviderWarning(modelSetting, 'chat');
     this.renderThinkingSetting(itemsEl, 'chat');
+    if (this.surface === 'defaults') {
+      this.renderChatLayoutSetting(itemsEl);
+    }
+  }
+
+  private renderChatLayoutSetting(itemsEl: HTMLElement): void {
+    new Setting(itemsEl)
+      .setName(COPY.openChatIn)
+      .setDesc(COPY.openChatInDesc)
+      .addDropdown(dropdown => {
+        dropdown
+          .addOption('right-sidebar', COPY.layoutRightSidebar)
+          .addOption('right-split', COPY.layoutRightSplit)
+          .addOption('tab', COPY.layoutNewTab)
+          .addOption('left-sidebar', COPY.layoutLeftSidebar)
+          .setValue(resolveChatOpenLocation(this.settings.chatLayout))
+          .onChange(value => {
+            this.settings.chatLayout = resolveChatOpenLocation(value);
+            this.notifyChange();
+          });
+      });
   }
 
   // ========== MODEL CAPABILITIES ==========
